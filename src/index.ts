@@ -11,7 +11,7 @@ const translations = {
 		example_one: 'Hay un elemento',
 		withOtherValues_none: 'No hay nada y {nombre}',
 		withOtherValues_one: 'Hay {count} elemento y {nombre}',
-		withOtherValues_other: 'Hay {count} elementos y {nombre}',
+		withOtherValues_other: 'Hay {count} elementos y {nombre} o {apellido}',
 	}
 } as const;
 
@@ -95,17 +95,51 @@ export function translate<
 	let current = translations;
 	for (const part of parts) {
 		// @ts-expect-error
-		current = current[part];
+		if (current[part]) {
+			// @ts-expect-error
+			current = current[part];
+		} else {
+			break;
+		}
 	}
-	if (typeof current !== 'string') {
+
+	if (typeof current === 'undefined') {
+		console.error(`Translation key "${key}" not found`);
 		return key as unknown as Value;
 	}
-	let value = current as string;
 
+	if (typeof current === 'object') {
+		// If its an object being returned check if its a plural key
+		// @ts-expect-error
+		const isPlural = current[`${parts.at(-1)}_none`] !== undefined || current[`${parts.at(-1)}_one`] !== undefined || current[`${parts.at(-1)}_other`] !== undefined;
+		if (isPlural) {
+			if (!args[0] || !Object.hasOwn(args[0], 'count')) {
+				console.error(`Missing count value for plural key "${key}"`);
+				return key as unknown as Value;
+			}
+			// @ts-expect-error
+			const count = Number(args[0]?.count);
+			if (!count) {
+				// @ts-expect-error
+				current = current[`${parts.at(-1)}_none`];
+			} else if (count === 1) {
+				// @ts-expect-error
+				current = current[`${parts.at(-1)}_one`];
+			} else {
+				// @ts-expect-error
+				current = current[`${parts.at(-1)}_other`];
+			}
+		} else {
+			console.error(`Incomplete translation key "${key}"`);
+			return key as unknown as Value;
+		}
+	}
+
+	let value = String(current);
 	const params = args[0];
 	if (params) {
 		for (const [param, val] of Object.entries(params)) {
-			value = value.replace(new RegExp(`{${param}}`, 'g'), String(val));
+			value = value.replaceAll(`{${param}}`, String(val));
 		}
 	}
 

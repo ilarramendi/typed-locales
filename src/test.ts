@@ -42,7 +42,7 @@ const translation10 = translate('plural.example', {});
 const translation11 = translate('plural.example');
 
 // Plural with other values
-const translation12 = translate('plural.withOtherValues', { count: 123, nombre: 'Juan' });
+const translation12 = translate('plural.withOtherValues', { count: 0, nombre: 'Juan', apellido: 'Perez' });
 
 // Plural with other values missing count value
 const translation13 = translate('plural.withOtherValues', { nombre: 123 });
