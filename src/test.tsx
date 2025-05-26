@@ -25,6 +25,7 @@ const Test = () => {
 		{t('mixedPluralNested', { count: 1, itemType: 'book', location: 'shelf' })}
 		{t('mixedPluralNested', { count: 10, itemType: 'book', location: 'shelf' })}
 		{t('onlyFormat', { value: 'capitalize this' })}
+		{/* @ts-expect-error */}
 		{t('escapeBraces')}
 		{locale}
 		<button onClick={() => setLocale('es')}>Change locale</button>

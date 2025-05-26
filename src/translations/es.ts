@@ -1,5 +1,5 @@
-import type { EnsureValidTranslation } from "../../test";
 import type { NamespaceShape, ValidateTranslation } from "../config";
+import type { EnsureValidTranslation } from "../validation";
 
 type Test = EnsureValidTranslation<ValidateTranslation<typeof es>>;
 const es = {
@@ -12,7 +12,9 @@ const es = {
 	},
 	withValue: 'Con valor {value}',
 	multipleValues: 'Múltiples valores: {one}, {two} y {three}',
+	// @ts-expect-error
 	examplePlural_none: 'No hay elementos disponibles',
+	// @ts-expect-error
 	examplePlural_one: 'Un elemento disponible',
 	examplePlural_other: '{count} elementos disponibles',
 	examplePluralWithOtherValues_none: 'No hay elementos para {user}',

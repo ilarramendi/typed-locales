@@ -1,5 +1,5 @@
-import type { EnsureValidTranslation } from "../../test";
 import type { ValidateTranslation } from '../config';
+import type { EnsureValidTranslation } from '../validation';
 
 type Test = EnsureValidTranslation<ValidateTranslation<typeof en>>;
 const en = {
