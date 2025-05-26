@@ -1,3 +1,4 @@
+import type { TranslationType } from '../index';
 import type { NamespaceShape } from './en';
 
 const es: NamespaceShape = {
@@ -12,7 +13,8 @@ const es: NamespaceShape = {
 	examplePlural_other: '{count} elementos',
 	examplePluralWithOtherValues_none: 'No elementos y {name}',
 	examplePluralWithOtherValues_one: 'Un elemento y {name}',
+	exampleWithFormatting: 'Esto es un {text|uppercase} ejemplo',
 	examplePluralWithOtherValues_other: '{count} elementos y {name} o {name2}',
-};
+} as const satisfies TranslationType;
 
 export default es;

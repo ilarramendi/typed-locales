@@ -1,16 +1,24 @@
+import baseFormatters from './formatters';
+
+type BaseFormatters = keyof typeof baseFormatters;
+
 // Remove const from object type
 export type DeepStringify<T> = {
 	[K in keyof T]: T[K] extends string ? string : T[K] extends object ? DeepStringify<T[K]> : never;
 };
 
-// Given a key rmove the plural sufix
-type RemovePluralSuffix<T extends string> = T extends `${infer Base}_none`
-	? Base
-	: T extends `${infer Base}_one`
-	? Base
-	: T extends `${infer Base}_other`
-	? Base
-	: T;
+// Plural suffixes as a union type
+type PluralSuffix = '_none' | '_one' | '_other';
+
+export type TranslationType = {
+	[key: string]: string | TranslationType;
+};
+
+// Remove plural suffix from a key
+type RemovePluralSuffix<T extends string> = T extends `${infer Base}${PluralSuffix}` ? Base : T;
+
+// Get all plural keys for a base key
+type PluralKeys<Base extends string> = `${Base}_none` | `${Base}_one` | `${Base}_other`;
 
 // Given a translations object returns a union of all possible keys
 type DotNestedLeafKeys<T> = {
@@ -21,56 +29,38 @@ type DotNestedLeafKeys<T> = {
 	: never;
 }[keyof T];
 
-// Based on a string containing placeholders, return a union type of all the placeholder keys
-type ExtractPlaceholders<S> = S extends `${string}{${infer Parameter}}${infer Rest}`
-	? ExtractPlaceholders<Rest> | Parameter
+
+// Extract placeholders from a string
+type ExtractPlaceholders<S, Formatters extends string> = S extends `${string}{${infer Parameter}}${infer Rest}`
+	? ExtractPlaceholders<Rest, Formatters> | (Parameter extends `${infer Field}|${Formatters}` ? Field : Parameter)
 	: never;
 
-// Get a union of all possible values of a key (returns multiple if plural)
+// Check if the key is plural
+type HasPluralKeys<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
+	? K extends keyof T
+	? HasPluralKeys<T[K], Rest>
+	: false
+	: PluralKeys<Path> & keyof T extends never
+	? false
+	: true;
+type IsPlural<T, Path extends string> = HasPluralKeys<T, Path>;
+
+// Get value(s) for a key (handles both regular and plural)
 type GetValue<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
 	? K extends keyof T
 	? GetValue<T[K], Rest>
 	: never
 	: Path extends keyof T
 	? T[Path]
-	:
-	| (`${Path}_none` extends keyof T ? T[`${Path}_none`] : never)
-	| (`${Path}_one` extends keyof T ? T[`${Path}_one`] : never)
-	| (`${Path}_other` extends keyof T ? T[`${Path}_other`] : never) extends never
-	? never
-	:
-	| (`${Path}_none` extends keyof T ? T[`${Path}_none`] : never)
-	| (`${Path}_one` extends keyof T ? T[`${Path}_one`] : never)
-	| (`${Path}_other` extends keyof T ? T[`${Path}_other`] : never);
+	: T[PluralKeys<Path> & keyof T];
 
-// Given a key and a plural boolean returns the properties object required for that key
-type InterpolationProperties<S, Plural extends boolean> =
-	ExtractPlaceholders<S> extends never
-	? Plural extends true
-	? { count: number }
-	: {}
-	: Plural extends true
-	? { count: number } & {
-		[K in Exclude<ExtractPlaceholders<S>, 'count'>]: ValueType;
-	}
-	: {
-		[K in ExtractPlaceholders<S>]: ValueType
-	};
-
-// Given a key returns if its plural
-type IsPlural<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
-	? K extends keyof T
-	? IsPlural<T[K], Rest>
-	: never
-	: `${Path}_none` extends keyof T
-	? true
-	: `${Path}_one` extends keyof T
-	? true
-	: `${Path}_other` extends keyof T
-	? true
-	: false;
-
-
+// Interpolation properties based on key type
+type InterpolationProperties<S, IsPlural extends boolean, Formatters extends string> =
+	IsPlural extends true
+	? { count: number } & Record<Exclude<ExtractPlaceholders<S, Formatters>, 'count'>, ValueType>
+	: ExtractPlaceholders<S, Formatters> extends never
+	? {}
+	: Record<ExtractPlaceholders<S, Formatters>, ValueType>;
 
 // Transform a complex typescript union object to a simple type
 type Simplify<T> = {
@@ -81,9 +71,16 @@ type Simplify<T> = {
 // Possible value types passed as parameters
 type ValueType = null | number | string | undefined;
 
+
 // Given a translations object returns a function that can be used to translate keys
-export const getTranslate = <Translations>(translations: Translations) => {
+export const getTranslate = <
+	Translations,
+	ExtraFormattersType extends string = string,
+	ExtraFormatters extends Record<ExtraFormattersType, (value: string) => string> = Record<ExtraFormattersType, (value: string) => string>,
+>(translations: Translations, extraFormatters?: ExtraFormatters) => {
 	type PossibleKeys = DotNestedLeafKeys<Translations>;
+	const formatters = { ...baseFormatters, ...extraFormatters };
+	type Formatters = BaseFormatters | ExtraFormattersType;
 
 	/**
 	 * Given a key returns the translated value
@@ -95,12 +92,13 @@ export const getTranslate = <Translations>(translations: Translations) => {
 			key: Key,
 			...arguments_: InterpolationProperties<
 				GetValue<Translations, Key>,
-				IsPlural<Translations, Key>
+				IsPlural<Translations, Key>,
+				Formatters
 			> extends Record<string, never>
 				? []
 				: [
 					params: Simplify<
-						InterpolationProperties<GetValue<Translations, Key>, IsPlural<Translations, Key>>
+						InterpolationProperties<GetValue<Translations, Key>, IsPlural<Translations, Key>, Formatters>
 					>,
 				]
 	): GetValue<Translations, Key> {
@@ -163,7 +161,19 @@ export const getTranslate = <Translations>(translations: Translations) => {
 		const parameters = arguments_[0];
 		if (parameters) {
 			for (const [parameter, value_] of Object.entries(parameters)) {
-				value = value.replaceAll(`{${parameter}}`, String(value_));
+				value = value.replaceAll(new RegExp(`{${parameter}(\\|[a-z|]+)?}`, 'g'), (match, formatters_) => {
+					const parsedFormatters = (formatters_?.split('|').filter(Boolean) ?? []) as (keyof typeof formatters)[];
+					let formattedValue = String(value_);
+					for (const formatter of parsedFormatters) {
+						if (!formatters[formatter]) {
+							console.error(`Formatter "${formatter}" not found used in key "${key}"`);
+
+							return match;
+						}
+						formattedValue = formatters[formatter](formattedValue);
+					}
+					return formattedValue;
+				});
 			}
 		}
 

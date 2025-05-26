@@ -8,6 +8,8 @@ type TranslationLoader<T> = (() => Promise<T>) | T;
 export const initReact = <
 	Translation,
 	Locales extends string,
+	ExtraFormattersType extends string = string,
+	ExtraFormatters extends Record<ExtraFormattersType, (value: string) => string> = Record<ExtraFormattersType, (value: string) => string>,
 	SimplifiedTranslation = DeepStringify<Translation>,
 	Translations extends Record<Locales, TranslationLoader<SimplifiedTranslation>> = Record<
 		Locales,
@@ -16,12 +18,13 @@ export const initReact = <
 >(
 	translations: Translations,
 	initialLocale: Locales,
+	extraFormatters?: ExtraFormatters,
 ) => {
 	interface TranslationContextType {
 		isLoading: boolean;
 		locale: keyof Translations;
 		setLocale: (locale: keyof Translations) => void;
-		t: ReturnType<typeof getTranslate<Translation>>;
+		t: ReturnType<typeof getTranslate<Translation, ExtraFormattersType>>;
 	}
 
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
@@ -29,7 +32,7 @@ export const initReact = <
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const [locale, setLocale] = useState<keyof Translations>(initialLocale);
 		const [translate, setTranslate] = useState(() =>
-			getTranslate(translations[locale] as Translation),
+			getTranslate(translations[locale] as Translation, extraFormatters),
 		);
 		const [isLoading, setIsLoading] = useState(true);
 

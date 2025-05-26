@@ -3,7 +3,9 @@ import { initReact } from './react';
 import en from './translations/en';
 
 
-const translate = getTranslate(en);
+const translate = getTranslate(en, {
+	testFormatter: (value) => 'test'
+});
 
 
 // Normal
@@ -55,6 +57,11 @@ const translation14 = translate('examplePluralWithOtherValues', { count: 123 });
 // Plural missing value property
 const translation15 = translate('examplePluralWithOtherValues');
 
+// With formatting
+const translation16 = translate('exampleWithFormatting', { text: 'Juan' });
+
+// With formatting using formatter key incorrectly
+const translation17 = translate('exampleWithFormatting', { 'text|testFormatter': 'Juan' });
 
 // React example
 const { useTranslation } = initReact<typeof en, 'en' | 'es'>({
@@ -66,7 +73,7 @@ const Test = () => {
 	const { t, locale, setLocale } = useTranslation()
 	
 	return <div>
-		{t('examplePlural', { count: 123 })}
+		{t('examplePluralWithOtherValues', { count: 123 })}
 		{locale}
 		<button onClick={() => setLocale('es')}>Change locale</button>
 	</div>;
