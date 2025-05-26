@@ -57,16 +57,16 @@ const translation15 = translate('examplePluralWithOtherValues');
 
 
 // React example
-const { useTranslate } = initReact({
+const { useTranslation } = initReact<typeof en, 'en' | 'es'>({
 	en,
 	es: () => import('./translations/es').then(module => module.default),
 }, 'en');
 
 const Test = () => {
-	const { translate, locale, setLocale } = useTranslate()
+	const { t, locale, setLocale } = useTranslation()
 	
 	return <div>
-		{translate('examplePlural', { count: 123 })}
+		{t('examplePlural', { count: 123 })}
 		{locale}
 		<button onClick={() => setLocale('es')}>Change locale</button>
 	</div>;

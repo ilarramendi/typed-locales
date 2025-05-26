@@ -1,39 +1,35 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getTranslate } from './index';
+import React, { createContext, useContext, useState } from 'react';
 
-type TranslationLoader<T> = T | (() => Promise<T>);
+import { type DeepStringify, getTranslate } from './index';
+
+type TranslationLoader<T> = (() => Promise<T>) | T;
 
 // Initial translation always should be loaded
-export function initReact<
-	const Translations extends Record<string, TranslationLoader<Record<string, any>>>,
-	Locales extends keyof Translations = keyof Translations
+export const initReact = <
+	Translation,
+	Locales extends string,
+	SimplifiedTranslation = DeepStringify<Translation>,
+	Translations extends Record<Locales, TranslationLoader<SimplifiedTranslation>> = Record<
+		Locales,
+		TranslationLoader<SimplifiedTranslation>
+	>,
 >(
 	translations: Translations,
 	initialLocale: Locales,
-) {
-	type Translation = Awaited<ReturnType<
-		Translations[Locales] extends () => Promise<infer T>
-		? Translations[Locales]
-		: () => Promise<Translations[Locales]>
-	>>;
-
-	type TranslationContextType = {
-		translate: ReturnType<typeof getTranslate<Translation>>;
+) => {
+	interface TranslationContextType {
+		isLoading: boolean;
 		locale: keyof Translations;
 		setLocale: (locale: keyof Translations) => void;
-		isLoading: boolean;
-	};
+		t: ReturnType<typeof getTranslate<Translation>>;
+	}
 
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
 
-	const TranslationProvider = ({
-		children,
-	}: {
-		children: React.ReactNode
-	}) => {
+	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const [locale, setLocale] = useState<keyof Translations>(initialLocale);
-		const [translate, setTranslate] = useState(
-			() => getTranslate(translations[locale] as Translation)
+		const [translate, setTranslate] = useState(() =>
+			getTranslate(translations[locale] as Translation),
 		);
 		const [isLoading, setIsLoading] = useState(true);
 
@@ -58,30 +54,33 @@ export function initReact<
 		};
 
 		return (
-			<TranslationContext.Provider value={{
-				translate,
-				locale,
-				setLocale: async (newLocale) => {
-					if (newLocale !== locale) {
-						setLocale(newLocale);
-						await loadTranslation(newLocale);
-					}
-				},
-				isLoading,
-			}}>
+			<TranslationContext.Provider
+				value={{
+					isLoading,
+					locale,
+					setLocale: async newLocale => {
+						if (newLocale !== locale) {
+							setLocale(newLocale);
+							await loadTranslation(newLocale);
+						}
+					},
+					t: translate,
+				}}
+			>
 				{children}
 			</TranslationContext.Provider>
 		);
 	};
 
-	const useTranslate = () => {
+	const useTranslation = () => {
 		const context = useContext(TranslationContext);
-		if (!context) throw new Error('useTranslate must be used within a TranslationProvider');
+		if (!context) throw new Error('useTranslation must be used within a TranslationProvider');
+
 		return context;
 	};
 
 	return {
 		TranslationProvider,
-		useTranslate,
+		useTranslation,
 	};
-}
+};
