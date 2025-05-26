@@ -63,25 +63,24 @@ type Simplify<T> = {
 	[K in keyof T]: T[K]
 } & {}
 
-
 export function getTranslate<
 	Translations
 >(translations: Translations) {
 	function translate<
-		Value extends GetValue<Translations, Key>,
 		Key extends DotNestedLeafKeys<Translations>,
-		Plural extends IsPlural<Translations, Key>,
 	>(
 		key: Key,
-		...args: InterpolationProps<Value, Plural> extends Record<string, never>
-			? []  // No params needed if no placeholders
-			: [params: Simplify<InterpolationProps<Value, Plural>>]  // Params required if placeholders exist
-	): Value {
+		...args: InterpolationProps<GetValue<Translations, Key>, IsPlural<Translations, Key>> extends Record<string, never>
+			? []
+			: [params: Simplify<InterpolationProps<GetValue<Translations, Key>, IsPlural<Translations, Key>>>]
+	): GetValue<Translations, Key> {
+		type Value = GetValue<Translations, Key>;
+
 		const parts = key.split('.');
 		let current = translations;
 		for (const part of parts) {
 			// @ts-expect-error
-			if (current[part]) {
+			if (current && current[part]) {
 				// @ts-expect-error
 				current = current[part];
 			} else {
@@ -132,5 +131,5 @@ export function getTranslate<
 		return value as Value;
 	}
 
-	return translate;
+	return translate; 
 }

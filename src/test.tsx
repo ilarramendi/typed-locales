@@ -1,4 +1,5 @@
 import { getTranslate } from './index';
+import { initReact } from './react';
 
 const translations = {
 	test: 'Regular translation',
@@ -67,3 +68,18 @@ const translation14 = translate('examplePluralWithOtherValues', { count: 123 });
 // Plural missing value property
 const translation15 = translate('examplePluralWithOtherValues');
 
+
+const { useTranslate } = initReact({
+	en: translations,
+	es: translations,
+}, 'en');
+
+const Test = () => {
+	const { translate, locale, setLocale } = useTranslate()
+
+	return <div>
+		{translate('examplePlural', { count: 123 })}
+		{locale}
+		<button onClick={() => setLocale('es')}>Change locale</button>
+	</div>;
+}

@@ -5,6 +5,7 @@
 			"ESNext",
 			"dom"
 		],
+		"jsx": "react-jsx",
 		"module": "commonjs",
 		"strict": true,
 		"esModuleInterop": true,
