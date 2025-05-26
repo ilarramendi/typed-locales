@@ -1,8 +1,8 @@
-import type { ValidateTranslation as ValidateTranslationInternal } from './validation';
-import { initReact } from './react';
+import type { ValidateTranslation as ValidateTranslationInternal } from '../validation';
+import { initReact } from '../react';
 import en from './translations/en';
-import { type Formatter } from './formatters';
-import type { GenerateTranslationType } from '.';
+import { type Formatter } from '../formatters';
+import type { GenerateTranslationType } from '..';
 
 const customFormatters = {
 	myCustomFormatter: () => 'Hello im custom',
