@@ -1,22 +1,9 @@
 import { getTranslate } from './index';
 import { initReact } from './react';
+import en from './translations/en';
 
-const translations = {
-	test: 'Regular translation',
-	nested: {
-		test: 'Nested translation',
-	},
-	withValue: 'With value {value}',
-	// Key dosnt need to include plural, its just for the example
-	examplePlural_none: 'No elements',
-	examplePlural_one: 'One element',
-	examplePlural_other: '{count} elements',
-	examplePluralWithOtherValues_none: 'No elements and {name}',
-	examplePluralWithOtherValues_one: 'One element and {name}',
-	examplePluralWithOtherValues_other: '{count} elements and {name} or {name2}',
-} as const;
 
-const translate = getTranslate(translations);
+const translate = getTranslate(en);
 
 
 // Normal
@@ -69,14 +56,15 @@ const translation14 = translate('examplePluralWithOtherValues', { count: 123 });
 const translation15 = translate('examplePluralWithOtherValues');
 
 
+// React example
 const { useTranslate } = initReact({
-	en: translations,
-	es: translations,
+	en,
+	es: () => import('./translations/es').then(module => module.default),
 }, 'en');
 
 const Test = () => {
 	const { translate, locale, setLocale } = useTranslate()
-
+	
 	return <div>
 		{translate('examplePlural', { count: 123 })}
 		{locale}
