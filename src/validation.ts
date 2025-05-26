@@ -1,7 +1,6 @@
-import en from "./src/translations/en";
-import type { Simplify, DeepStringify, RemoveReadonlyDeep } from "./src/index";
+import type { BaseFormatters, RemoveReadonlyDeep } from ".";
 
-type ErrorMessage<Value extends string, T extends string> = `🚫 You are using an invalid formatter: ${T} in: "${Value}"`;
+type ErrorMessage<Value extends string, T extends string> = `You are using an invalid formatter: ${T} in: "${Value}"`;
 
 // Extract formatter from {data|formatter} pattern
 type ExtractFormatter<T extends string> =
@@ -25,7 +24,7 @@ type CountCloseBraces<T extends string, Count extends readonly unknown[] = []> =
 type BalancedBraces<T extends string> =
 	CountOpenBraces<T> extends CountCloseBraces<T>
 	? never // Brackets are balanced
-	: `🚫 Brackets are not balanced in: "${T}"` // Brackets are not balanced
+	: `Brackets are not balanced in: "${T}"` // Brackets are not balanced
 
 // Validate formatter and return error message if invalid
 type ValidateFormatter<T extends string, Formatters extends string> =
@@ -43,6 +42,6 @@ type InternalValidateTranslation<T, Formatters extends string, KeyPath extends s
 	? ValidateFormatter<T, Formatters>
 	: T;
 	
-export type ValidateTranslation<T, Formatters extends string> = RemoveReadonlyDeep<InternalValidateTranslation<T, Formatters | >>;
+export type ValidateTranslation<T, Formatters extends string> = RemoveReadonlyDeep<InternalValidateTranslation<T, BaseFormatters | Formatters >>;
 
 export type EnsureValidTranslation<T extends never> = T;

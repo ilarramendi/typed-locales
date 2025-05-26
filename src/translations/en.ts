@@ -1,21 +1,33 @@
-import type { DeepStringify, RemoveReadonlyDeep, Simplify } from '../index';
+import type { EnsureValidTranslation } from "../../test";
+import type { ValidateTranslation } from '../config';
 
+type Test = EnsureValidTranslation<ValidateTranslation<typeof en>>;
 const en = {
 	test: 'Regular translation',
 	nested: {
-		test: 'Nested translation',
+		test: 'Nested {translation|myCustomFormatter}',
+		deep: {
+			again: 'Nested again with {value} and {otherValue}',
+		},
 	},
 	withValue: 'With value {value}',
-	// Key dosnt need to include plural, its just for the example
-	examplePlural_none: 'No elements',
-	examplePlural_one: 'One element',
-	examplePlural_other: '{count} elements',
-	examplePluralWithOtherValues_none: 'No elements and {name}',
-	examplePluralWithOtherValues_one: 'One element and {name}',
-	examplePluralWithOtherValues_other: '{count} elements and {name} or {name2}',
-	exampleWithFormatting: 'This is a {text|testFormatter} example',
+	multipleValues: 'Multiple values: {one}, {two}, and {three}',
+	examplePlural_none: 'No items available',
+	examplePlural_one: 'One item available',
+	examplePlural_other: '{count} items available',
+	examplePluralWithOtherValues_none: 'No items for {user}',
+	examplePluralWithOtherValues_one: 'One item for {user}',
+	examplePluralWithOtherValues_other: '{count} items for {user} and {otherUser}',
+	exampleWithFormatting: 'Formatted {value|uppercase} text and {other|lowercase}',
+	exampleWithJSONFormatter: 'JSON formatter: {data|json}',
+	pluralWithNestedSubstitution_none: 'No results found for {query}',
+	pluralWithNestedSubstitution_one: 'One result for {query} with {user|capitalize}',
+	pluralWithNestedSubstitution_other: '{count} results for {query} by {user|capitalize}',
+	mixedPluralNested_none: 'No {itemType} in {location}',
+	mixedPluralNested_one: 'One {itemType} in {location|uppercase}',
+	mixedPluralNested_other: '{count} {itemType}s in {location|uppercase}',
+	onlyFormat: 'Just formatting: {value|capitalize}',
+	escapeBraces: 'Braces like this: \\{notAKey\\}',
 } as const; 
-
-export type NamespaceShape = DeepStringify<typeof en>
 
 export default en;

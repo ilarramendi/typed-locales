@@ -1,79 +1,31 @@
-import { getTranslate } from './index';
-import { initReact } from './react';
-import en from './translations/en';
+import { useTranslation } from './config';
 
-
-const translate = getTranslate(en, {
-	testFormatter: (value) => 'test'
-});
-
-
-// Normal
-const translation = translate('test');
-//     ^?
-
-// Nested
-const translation2 = translate('nested.test');
-//    ^? string
-
-// Incorrect key
-const translation3 = translate('incorrectKey');
-
-// With value
-const translation4 = translate('withValue', { value: 'Juan' });
-//     ^?
-
-// Incorrect value
-const translation5 = translate('withValue', { incorrect: 'Juan' });
-
-// Unnecesary value
-const translation7 = translate('test', {});
-
-// Missing value key
-const translation6 = translate('withValue', {});
-
-// Missing value property
-const translation8 = translate('withValue');
-
-// Plural
-const translation9 = translate('examplePlural', { count: 123 });
-//     ^?
-
-// Plural missing count value
-const translation10 = translate('examplePlural', {});
-
-// Plural missing values
-const translation11 = translate('examplePlural');
-
-// Plural with other values
-const translation12 = translate('examplePluralWithOtherValues', { count: 0, name: 'Juan', name2: 'Perez' });
-
-// Plural with other values missing count value
-const translation13 = translate('examplePluralWithOtherValues', { name: 'Juan', name2: 'Perez' });
-
-// Plural with other values missing values
-const translation14 = translate('examplePluralWithOtherValues', { count: 123 });
-
-// Plural missing value property
-const translation15 = translate('examplePluralWithOtherValues');
-
-// With formatting
-const translation16 = translate('exampleWithFormatting', { text: 'Juan' });
-
-// With formatting using formatter key incorrectly
-const translation17 = translate('exampleWithFormatting', { 'text|testFormatter': 'Juan' });
-
-// React example
-const { useTranslation } = initReact<typeof en, 'en' | 'es'>({
-	en,
-	es: () => import('./translations/es').then(module => module.default),
-}, 'en');
 
 const Test = () => {
 	const { t, locale, setLocale } = useTranslation()
 	
 	return <div>
-		{t('examplePluralWithOtherValues', { count: 123 })}
+		{t('test')}
+		{t('nested.test', { translation: 'translated text' })}
+		{t('nested.deep.again', { value: 'someValue', otherValue: 'anotherValue' })}
+		{t('withValue', { value: 'myValue' })}
+		{t('multipleValues', { one: '1', two: '2', three: '3' })}
+		{t('examplePlural', { count: 0 })}
+		{t('examplePlural', { count: 1 })}
+		{t('examplePlural', { count: 5 })}
+		{t('examplePluralWithOtherValues', { count: 0, user: 'Alice', otherUser: undefined })}
+		{t('examplePluralWithOtherValues', { count: 1, user: 'Alice', otherUser: undefined })}
+		{t('examplePluralWithOtherValues', { count: 123, user: 'Alice', otherUser: 'Bob' })}
+		{t('exampleWithFormatting', { value: 'TEXT', other: 'Text' })}
+		{t('exampleWithJSONFormatter', { data: { key: 'value' } })}
+		{t('pluralWithNestedSubstitution', { count: 0, query: 'search', user: undefined })}
+		{t('pluralWithNestedSubstitution', { count: 1, query: 'search', user: 'john' })}
+		{t('pluralWithNestedSubstitution', { count: 5, query: 'search', user: 'john' })}
+		{t('mixedPluralNested', { count: 0, itemType: 'book', location: 'shelf' })}
+		{t('mixedPluralNested', { count: 1, itemType: 'book', location: 'shelf' })}
+		{t('mixedPluralNested', { count: 10, itemType: 'book', location: 'shelf' })}
+		{t('onlyFormat', { value: 'capitalize this' })}
+		{t('escapeBraces')}
 		{locale}
 		<button onClick={() => setLocale('es')}>Change locale</button>
 	</div>;

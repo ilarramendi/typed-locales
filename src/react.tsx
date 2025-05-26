@@ -23,21 +23,21 @@ export const initReact = <
 ) => {
 	interface TranslationContextType {
 		isLoading: boolean;
-		locale: keyof Translations;
-		setLocale: (locale: keyof Translations) => void;
+		locale: Locales;
+		setLocale: (locale: Locales) => void;
 		t: ReturnType<typeof getTranslate<Translation, ExtraFormattersType>>;
 	}
 
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
 
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
-		const [locale, setLocale] = useState<keyof Translations>(initialLocale);
+		const [locale, setLocale] = useState<Locales>(initialLocale);
 		const [translate, setTranslate] = useState(() =>
-			getTranslate(translations[locale] as Translation, extraFormatters) as TranslationContextType['t'],
+			getTranslate(translations[locale] as Translation, locale, extraFormatters) as TranslationContextType['t'],
 		);
 		const [isLoading, setIsLoading] = useState(true);
 
-		const loadTranslation = async (targetLocale: keyof Translations) => {
+		const loadTranslation = async (targetLocale: Locales) => {
 			try {
 				const translationOrLoader = translations[targetLocale];
 				let translationData: Translation;
@@ -49,7 +49,7 @@ export const initReact = <
 					translationData = translationOrLoader as Translation;
 				}
 
-				setTranslate(getTranslate(translationData, extraFormatters) as TranslationContextType['t']);
+				setTranslate(getTranslate(translationData, targetLocale, extraFormatters) as TranslationContextType['t']);
 			} catch (error) {
 				console.error(`Failed to load translations for locale ${String(targetLocale)}:`, error);
 			} finally {
@@ -83,8 +83,10 @@ export const initReact = <
 		return context;
 	};
 
+
 	return {
 		TranslationProvider,
-		useTranslation,
+		useTranslation
 	};
 };
+

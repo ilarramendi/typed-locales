@@ -1,7 +1,10 @@
 import baseFormatters from './formatters';
 import type { Formatter } from './formatters';
 
-type BaseFormatters = keyof typeof baseFormatters;
+// Possible value types passed as parameters
+type ValueType = null | number | string | undefined | object;
+
+export type BaseFormatters = keyof typeof baseFormatters;
 
 // Remove const from object type
 export type InternalDeepStringify<T> = {
@@ -28,7 +31,7 @@ export type TranslationType = {
 type RemovePluralSuffix<T extends string> = T extends `${infer Base}${PluralSuffix}` ? Base : T;
 
 // Get all plural keys for a base key
-type PluralKeys<Base extends string> = `${Base}_none` | `${Base}_one` | `${Base}_other`;
+type PluralKeys<Base extends string> = `${Base}${PluralSuffix}`;
 
 // Given a translations object returns a union of all possible keys
 type DotNestedLeafKeys<T> = {
@@ -39,10 +42,26 @@ type DotNestedLeafKeys<T> = {
 	: never;
 }[keyof T];
 
+// Given a string properties generated from the base translation, generate a generic string type for all translations
+type GenerateStringFromProperties<T extends Record<string, any>> =
+	T extends Record<string, never>
+	? string
+	: `${string}{${keyof T & string}${string}` | `${string}{${keyof T & string}|${string}}${string}`;
+
+
+// TODO for multi value keys we have to merge the 
+export type GenerateTranslationType<T> = {
+	-readonly [K in keyof T]: T[K] extends object
+	? Simplify<GenerateTranslationType<T[K]>>
+	: GenerateStringFromProperties<InterpolationProperties<RemovePluralSuffix<T[K] & string>, IsPlural<T, RemovePluralSuffix<K & string>>>>;
+};
 
 // Extract placeholders from a string
-type ExtractPlaceholders<S, Formatters extends string> = S extends `${string}{${infer Parameter}}${infer Rest}`
-	? ExtractPlaceholders<Rest, Formatters> | (Parameter extends `${infer Field}|${Formatters}` ? Field : Parameter)
+type ExtractPlaceholders<T extends string> =
+	T extends `${infer _Start}{${infer Placeholder}}${infer Rest}`
+	? (Placeholder extends `${infer Name}|${infer _Formatters}`
+		? Name
+		: Placeholder) | ExtractPlaceholders<Rest>
 	: never;
 
 // Check if the key is plural
@@ -65,12 +84,18 @@ type GetValue<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
 	: T[PluralKeys<Path> & keyof T];
 
 // Interpolation properties based on key type
-type InterpolationProperties<S, IsPlural extends boolean, Formatters extends string> =
-	IsPlural extends true
-	? { count: number } & Record<Exclude<ExtractPlaceholders<S, Formatters>, 'count'>, ValueType>
-	: ExtractPlaceholders<S, Formatters> extends never
+type InterpolationProperties<
+	S extends string,
+	IsPlural extends boolean,
+> = IsPlural extends true
+	? { count: number } & {
+		[K in Exclude<ExtractPlaceholders<S>, 'count'>]: ValueType;
+	}
+	: ExtractPlaceholders<S> extends never
 	? {}
-	: Record<ExtractPlaceholders<S, Formatters>, ValueType>;
+	: {
+		[K in ExtractPlaceholders<S>]: ValueType;
+	};
 
 // Transform a complex typescript union object to a simple type
 type InternalSimplify<T> = {
@@ -98,8 +123,7 @@ type DeepOmitNever<T> = {
 // Given a complex object type simplify it
 export type Simplify<T> = InternalSimplify<DeepOmitNever<T>>;
 
-// Possible value types passed as parameters
-type ValueType = null | number | string | undefined;
+
 
 
 // Given a translations object returns a function that can be used to translate keys
@@ -121,14 +145,13 @@ export const getTranslate = <
 	>(
 			key: Key,
 			...arguments_: InterpolationProperties<
-				GetValue<Translations, Key>,
-				IsPlural<Translations, Key>,
-				Formatters
+				GetValue<Translations, Key> & string,
+				IsPlural<Translations, Key>
 			> extends Record<string, never>
 				? []
 				: [
 					params: Simplify<
-						InterpolationProperties<GetValue<Translations, Key>, IsPlural<Translations, Key>, Formatters>
+						InterpolationProperties<GetValue<Translations, Key> & string, IsPlural<Translations, Key>>
 					>,
 				]
 	): GetValue<Translations, Key> {
