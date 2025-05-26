@@ -5,6 +5,11 @@ const translations = {
 	},
 	withValue: {
 		hello: 'Hola {nombre}',
+	},
+	plural: {
+		example_none: 'No hay nada',
+		example_one: 'Hay un elemento',
+		example_other: 'Hay {count} elementos',
 	}
 } as const;
 
@@ -27,22 +32,16 @@ type GetValue<T, Path extends string> =
 	: never;
 
 type exampleGetValue = GetValue<typeof translations, 'nested.nestedTest'>;
-//    ^? string
 
 type ExtractPlaceholders<S> =
 	S extends `${string}{${infer Param}}${infer Rest}`
 	? Param | ExtractPlaceholders<Rest>
 	: never;
-type exampleExtractPlaceholders = ExtractPlaceholders<'Hola {nombre} {pepe}'>;
-//    ^? 'nombre'
 
 type InterpolationProps<S> =
 	ExtractPlaceholders<S> extends never
 	? {}
 	: Record<ExtractPlaceholders<S>, string | number>;
-
-type exampleInterpolationProps = InterpolationProps<'Hola {nombre} {pepe}'>;
-//    ^?
 
 
 type Flatten<T> = {
@@ -52,21 +51,17 @@ type Flatten<T> = {
 	}
 };
 
-type exampleFlatten = Flatten<typeof translations>;
-//    ^? {
-
-
-const translate = <
-	T,
-	K extends DotNestedLeafKeys<T>,
-	P extends InterpolationProps<GetValue<T, K>>
+export function translate<
+	T extends typeof translations,
+	K extends DotNestedLeafKeys<T>
 >(
-	obj: T,
 	key: K,
-	params?: P
-) => {
+	...args: InterpolationProps<GetValue<T, K>> extends Record<string, never>
+		? []  // No params needed if no placeholders
+		: [params: InterpolationProps<GetValue<T, K>>]  // Params required if placeholders exist
+): GetValue<T, K> {
 	const parts = key.split('.');
-	let current = obj;
+	let current = translations;
 	for (const part of parts) {
 		// @ts-expect-error
 		current = current[part];
@@ -76,6 +71,7 @@ const translate = <
 	}
 	let value = current as string;
 
+	const params = args[0];
 	if (params) {
 		for (const [param, val] of Object.entries(params)) {
 			value = value.replace(new RegExp(`{${param}}`, 'g'), String(val));
@@ -83,21 +79,4 @@ const translate = <
 	}
 
 	return value as GetValue<T, K>;
-};
-
-
-const translation = translate(translations, 'test');
-//    ^? string
-
-const translation2 = translate(translations, 'nested.nestedTest');
-//    ^? string
-
-const translation3 = translate(translations, 'nested.noFunciona');
-//    ^? string
-
-const translation4 = translate(translations, 'withValue.hello', { nombre: 'Juan' });
-
-console.log(translation);
-console.log(translation2);
-console.log(translation3);
-console.log(translation4);
+}
