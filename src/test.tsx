@@ -14,8 +14,8 @@ const translation = translate('test');
 const translation2 = translate('nested.test');
 //    ^? string
 
-// Incorrect
-const translation3 = translate('nested.noFunciona');
+// Incorrect key
+const translation3 = translate('incorrectKey');
 
 // With value
 const translation4 = translate('withValue', { value: 'Juan' });

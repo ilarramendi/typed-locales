@@ -1,7 +1,18 @@
+// Remove const from object type
 export type DeepStringify<T> = {
 	[K in keyof T]: T[K] extends string ? string : T[K] extends object ? DeepStringify<T[K]> : never;
 };
 
+// Given a key rmove the plural sufix
+type RemovePluralSuffix<T extends string> = T extends `${infer Base}_none`
+	? Base
+	: T extends `${infer Base}_one`
+	? Base
+	: T extends `${infer Base}_other`
+	? Base
+	: T;
+
+// Given a translations object returns a union of all possible keys
 type DotNestedLeafKeys<T> = {
 	[K in keyof T]: K extends string
 	? T[K] extends Record<string, any>
@@ -15,6 +26,7 @@ type ExtractPlaceholders<S> = S extends `${string}{${infer Parameter}}${infer Re
 	? ExtractPlaceholders<Rest> | Parameter
 	: never;
 
+// Get a union of all possible values of a key (returns multiple if plural)
 type GetValue<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
 	? K extends keyof T
 	? GetValue<T[K], Rest>
@@ -31,15 +43,21 @@ type GetValue<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
 	| (`${Path}_one` extends keyof T ? T[`${Path}_one`] : never)
 	| (`${Path}_other` extends keyof T ? T[`${Path}_other`] : never);
 
+// Given a key and a plural boolean returns the properties object required for that key
 type InterpolationProperties<S, Plural extends boolean> =
 	ExtractPlaceholders<S> extends never
 	? Plural extends true
 	? { count: number }
 	: {}
 	: Plural extends true
-	? Omit<Record<ExtractPlaceholders<S>, ValueType>, 'count'> & { count: number }
-	: Record<ExtractPlaceholders<S>, ValueType>;
+	? { count: number } & {
+		[K in Exclude<ExtractPlaceholders<S>, 'count'>]: ValueType;
+	}
+	: {
+		[K in ExtractPlaceholders<S>]: ValueType
+	};
 
+// Given a key returns if its plural
 type IsPlural<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
 	? K extends keyof T
 	? IsPlural<T[K], Rest>
@@ -52,35 +70,40 @@ type IsPlural<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
 	? true
 	: false;
 
-type RemovePluralSuffix<T extends string> = T extends `${infer Base}_none`
-	? Base
-	: T extends `${infer Base}_one`
-	? Base
-	: T extends `${infer Base}_other`
-	? Base
-	: T;
 
+
+// Transform a complex typescript union object to a simple type
 type Simplify<T> = {
 	[K in keyof T]: T[K];
 	// eslint-disable-next-line sonarjs/no-useless-intersection
 } & {};
 
+// Possible value types passed as parameters
 type ValueType = null | number | string | undefined;
 
+// Given a translations object returns a function that can be used to translate keys
 export const getTranslate = <Translations>(translations: Translations) => {
-	const translate = <Key extends DotNestedLeafKeys<Translations>>(
-		key: Key,
-		...arguments_: InterpolationProperties<
-			GetValue<Translations, Key>,
-			IsPlural<Translations, Key>
-		> extends Record<string, never>
-			? []
-			: [
-				params: Simplify<
-					InterpolationProperties<GetValue<Translations, Key>, IsPlural<Translations, Key>>
-				>,
-			]
-	): GetValue<Translations, Key> => {
+	type PossibleKeys = DotNestedLeafKeys<Translations>;
+
+	/**
+	 * Given a key returns the translated value
+	 * Supports nested keys, substitutions and plurals
+	 */
+	function translate<
+		Key extends PossibleKeys
+	>(
+			key: Key,
+			...arguments_: InterpolationProperties<
+				GetValue<Translations, Key>,
+				IsPlural<Translations, Key>
+			> extends Record<string, never>
+				? []
+				: [
+					params: Simplify<
+						InterpolationProperties<GetValue<Translations, Key>, IsPlural<Translations, Key>>
+					>,
+				]
+	): GetValue<Translations, Key> {
 		type Value = GetValue<Translations, Key>;
 
 		const parts = key.split('.');
@@ -145,7 +168,7 @@ export const getTranslate = <Translations>(translations: Translations) => {
 		}
 
 		return value as Value;
-	};
+	}
 
 	return translate;
 };
