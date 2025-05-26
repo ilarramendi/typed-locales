@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
 import { type DeepStringify, getTranslate } from './index';
+import type { Formatter } from './formatters';
 
 type TranslationLoader<T> = (() => Promise<T>) | T;
 
@@ -9,7 +10,7 @@ export const initReact = <
 	Translation,
 	Locales extends string,
 	ExtraFormattersType extends string = string,
-	ExtraFormatters extends Record<ExtraFormattersType, (value: string) => string> = Record<ExtraFormattersType, (value: string) => string>,
+	ExtraFormatters extends Record<ExtraFormattersType, Formatter> = Record<ExtraFormattersType, Formatter>,
 	SimplifiedTranslation = DeepStringify<Translation>,
 	Translations extends Record<Locales, TranslationLoader<SimplifiedTranslation>> = Record<
 		Locales,
@@ -32,7 +33,7 @@ export const initReact = <
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const [locale, setLocale] = useState<keyof Translations>(initialLocale);
 		const [translate, setTranslate] = useState(() =>
-			getTranslate(translations[locale] as Translation, extraFormatters),
+			getTranslate(translations[locale] as Translation, extraFormatters) as TranslationContextType['t'],
 		);
 		const [isLoading, setIsLoading] = useState(true);
 
@@ -48,7 +49,7 @@ export const initReact = <
 					translationData = translationOrLoader as Translation;
 				}
 
-				setTranslate(() => getTranslate(translationData));
+				setTranslate(getTranslate(translationData, extraFormatters) as TranslationContextType['t']);
 			} catch (error) {
 				console.error(`Failed to load translations for locale ${String(targetLocale)}:`, error);
 			} finally {

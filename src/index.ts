@@ -1,11 +1,21 @@
 import baseFormatters from './formatters';
+import type { Formatter } from './formatters';
 
 type BaseFormatters = keyof typeof baseFormatters;
 
 // Remove const from object type
-export type DeepStringify<T> = {
-	[K in keyof T]: T[K] extends string ? string : T[K] extends object ? DeepStringify<T[K]> : never;
+export type InternalDeepStringify<T> = {
+	[K in keyof T]: T[K] extends string ? string : T[K] extends object ? InternalDeepStringify<T[K]> : never;
 };
+
+export type DeepStringify<T> = RemoveReadonlyDeep<InternalDeepStringify<T>>;
+
+export type InternalRemoveReadonlyDeep<T> = {
+	-readonly [K in keyof T]: T[K] extends object ? InternalRemoveReadonlyDeep<T[K]> : T[K];
+};
+
+export type RemoveReadonlyDeep<T> = Simplify<InternalRemoveReadonlyDeep<T>>;
+
 
 // Plural suffixes as a union type
 type PluralSuffix = '_none' | '_one' | '_other';
@@ -63,10 +73,30 @@ type InterpolationProperties<S, IsPlural extends boolean, Formatters extends str
 	: Record<ExtractPlaceholders<S, Formatters>, ValueType>;
 
 // Transform a complex typescript union object to a simple type
-type Simplify<T> = {
-	[K in keyof T]: T[K];
+type InternalSimplify<T> = {
+	[K in keyof T]: InternalSimplify<T[K]>;
 	// eslint-disable-next-line sonarjs/no-useless-intersection
 } & {};
+
+type DeepOmitNever<T> = {
+	[K in keyof T as T[K] extends never 
+		? never 
+		: T[K] extends Record<string, any>
+			? DeepOmitNever<T[K]> extends never
+				? never
+				: K
+			: K
+	]: T[K] extends Record<string, any>
+		? DeepOmitNever<T[K]>
+		: T[K];
+} extends infer U
+	? keyof U extends never
+		? never
+		: U
+	: never;
+
+// Given a complex object type simplify it
+export type Simplify<T> = InternalSimplify<DeepOmitNever<T>>;
 
 // Possible value types passed as parameters
 type ValueType = null | number | string | undefined;
@@ -76,11 +106,11 @@ type ValueType = null | number | string | undefined;
 export const getTranslate = <
 	Translations,
 	ExtraFormattersType extends string = string,
-	ExtraFormatters extends Record<ExtraFormattersType, (value: string) => string> = Record<ExtraFormattersType, (value: string) => string>,
->(translations: Translations, extraFormatters?: ExtraFormatters) => {
+	ExtraFormatters extends Record<ExtraFormattersType, Formatter> = Record<ExtraFormattersType, Formatter>,
+>(translations: Translations, locale: string, extraFormatters?: ExtraFormatters) => {
 	type PossibleKeys = DotNestedLeafKeys<Translations>;
-	const formatters = { ...baseFormatters, ...extraFormatters };
 	type Formatters = BaseFormatters | ExtraFormattersType;
+	const formatters = { ...baseFormatters, ...extraFormatters } as Record<Formatters, Formatter>;
 
 	/**
 	 * Given a key returns the translated value
@@ -170,7 +200,7 @@ export const getTranslate = <
 
 							return match;
 						}
-						formattedValue = formatters[formatter](formattedValue);
+						formattedValue = formatters[formatter](formattedValue, locale);
 					}
 					return formattedValue;
 				});

@@ -1,4 +1,4 @@
-import type { DeepStringify, TranslationType } from '../index';
+import type { DeepStringify, RemoveReadonlyDeep, Simplify } from '../index';
 
 const en = {
 	test: 'Regular translation',
@@ -14,8 +14,8 @@ const en = {
 	examplePluralWithOtherValues_one: 'One element and {name}',
 	examplePluralWithOtherValues_other: '{count} elements and {name} or {name2}',
 	exampleWithFormatting: 'This is a {text|testFormatter} example',
-} as const satisfies TranslationType; 
+} as const; 
 
-export type NamespaceShape = DeepStringify<typeof en>;
+export type NamespaceShape = DeepStringify<typeof en>
 
 export default en;
