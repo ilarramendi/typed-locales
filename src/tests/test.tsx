@@ -27,6 +27,8 @@ const Test = () => {
 		{t('onlyFormat', { value: 'capitalize this' })}
 		{/* @ts-expect-error */}
 		{t('escapeBraces')}
+		{/* @ts-expect-error */}
+		{t('incorrectKey')}
 		{locale}
 		<button onClick={() => setLocale('es')}>Change locale</button>
 	</div>;

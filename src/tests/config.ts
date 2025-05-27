@@ -2,7 +2,7 @@ import type { ValidateTranslation as ValidateTranslationInternal } from '../vali
 import { initReact } from '../react';
 import en from './translations/en';
 import { type Formatter } from '../formatters';
-import type { GenerateTranslationType } from '..';
+import type { GenerateTranslationType } from '../..';
 
 const customFormatters = {
 	myCustomFormatter: () => 'Hello im custom',

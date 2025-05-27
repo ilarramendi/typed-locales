@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-import { type DeepStringify, getTranslate } from './index';
+import { type DeepStringify, getTranslate } from '../index';
 import type { Formatter } from './formatters';
 
 type TranslationLoader<T> = (() => Promise<T>) | T;

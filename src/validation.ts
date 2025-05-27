@@ -1,4 +1,4 @@
-import type { BaseFormatters, RemoveReadonlyDeep } from ".";
+import type { BaseFormatters, RemoveReadonlyDeep } from "..";
 
 type ErrorMessage<Value extends string, T extends string> = `You are using an invalid formatter: ${T} in: "${Value}"`;
 
