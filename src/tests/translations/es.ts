@@ -11,7 +11,9 @@ const es = {
 	},
 	withValue: 'Con valor {value}',
 	multipleValues: 'Múltiples valores: {one}, {two} y {three}',
+	// @ts-expect-error
 	examplePlural_none: 'No hay elementos disponibles',
+	// @ts-expect-error
 	examplePlural_one: 'Un elemento disponible',
 	examplePlural_other: '{count} elementos disponibles',
 	examplePluralWithOtherValues_none: 'No hay elementos para {user}',
