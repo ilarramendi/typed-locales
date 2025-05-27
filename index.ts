@@ -11,10 +11,13 @@ export interface DefaultOverrides {
 };
 export interface Overrides  extends DefaultOverrides {};
 export type Translations = Overrides['shape'];
+export type OtherTranslations = DeepStringify<Translations>;
+export type TranslationSchema = GenerateTranslationType<Translations>;
 export type Locales = Overrides['locales'];
 export type BaseFormatters = typeof baseFormatters;
 export type ExtraFormatters = Overrides['extraFormatters'];
-export type Formatters = BaseFormatters | ExtraFormatters;
+export type Formatters = BaseFormatters & ExtraFormatters;
+export type FormattersKeys = keyof Formatters;
 export type PossibleTranslationKeys = DotNestedLeafKeys<Translations>;
 
 // Remove const from object type
@@ -44,7 +47,6 @@ type RemovePluralSuffix<T extends string> = T extends `${infer Base}${PluralSuff
 // Get all plural keys for a base key
 type PluralKeys<Base extends string> = `${Base}${PluralSuffix}`;
 
-// Given a translations object returns a union of all possible keys
 type DotNestedLeafKeys<T> = {
 	[K in keyof T]: K extends string
 	? T[K] extends Record<string, any>
@@ -64,7 +66,7 @@ type GenerateStringFromProperties<T extends Record<string, any>> =
 export type GenerateTranslationType<T> = {
 	-readonly [K in keyof T]: T[K] extends object
 	? Simplify<GenerateTranslationType<T[K]>>
-	: GenerateStringFromProperties<InterpolationProperties<RemovePluralSuffix<T[K] & string>, IsPlural<T, RemovePluralSuffix<K & string>>>>;
+	: GenerateStringFromProperties<InterpolationProperties<RemovePluralSuffix<T[K] & string>, IsPlural<RemovePluralSuffix<K & string>>>>;
 };
 
 // Extract placeholders from a string
@@ -219,7 +221,7 @@ export const getTranslate = (translations: Translations, locale: Locales, extraF
 		if (parameters) {
 			for (const [parameter, value_] of Object.entries(parameters)) {
 				value = value.replaceAll(new RegExp(`{${parameter}(\\|[a-z|]+)?}`, 'g'), (match, formatters_) => {
-					const parsedFormatters = (formatters_?.split('|').filter(Boolean) ?? []) as (keyof typeof formatters)[];
+					const parsedFormatters = (formatters_?.split('|').filter(Boolean) ?? []) as FormattersKeys[];
 					let formattedValue = String(value_);
 					for (const formatter of parsedFormatters) {
 						if (!formatters[formatter]) {
@@ -227,7 +229,7 @@ export const getTranslate = (translations: Translations, locale: Locales, extraF
 
 							return match;
 						}
-						formattedValue = formatters[formatter](formattedValue, locale);
+						formattedValue = (formatters[formatter] as Formatter)(formattedValue, locale);
 					}
 					return formattedValue;
 				});
@@ -244,4 +246,4 @@ export { initReact } from './src/react';
 
 export { type Formatter, default as defaultFormatters } from './src/formatters';
 
-export { type ValidateTranslation as ValidateTranslationInternal, type EnsureValidTranslation } from './src/validation';
+export { type ValidateTranslation, type EnsureValidTranslation } from './src/validation';

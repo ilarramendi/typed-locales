@@ -1,7 +1,6 @@
-import type { ValidateTranslation } from '../config';
-import type { EnsureValidTranslation } from '../../validation';
+import type { EnsureValidTranslation, ValidateTranslation } from '../../../index';
 
-type Test = EnsureValidTranslation<ValidateTranslation<typeof en>>;
+type _test = EnsureValidTranslation<ValidateTranslation<typeof en>>;
 const en = {
 	test: 'Regular translation',
 	nested: {

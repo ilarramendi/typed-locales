@@ -1,4 +1,4 @@
-import type { BaseFormatters, RemoveReadonlyDeep } from "..";
+import type { FormattersKeys, RemoveReadonlyDeep } from "../index";
 
 type ErrorMessage<Value extends string, T extends string> = `You are using an invalid formatter: ${T} in: "${Value}"`;
 
@@ -27,21 +27,20 @@ type BalancedBraces<T extends string> =
 	: `Brackets are not balanced in: "${T}"` // Brackets are not balanced
 
 // Validate formatter and return error message if invalid
-type ValidateFormatter<T extends string, Formatters extends string> =
+type ValidateFormatter<T extends string> =
 	ExtractFormatter<T> extends never
 	? BalancedBraces<T> // No formatter found
-	: ExtractFormatter<T> extends Formatters
+	: ExtractFormatter<T> extends FormattersKeys
 	? BalancedBraces<T> // Valid formatter
 	: ErrorMessage<T, ExtractFormatter<T>>; // Invalid formatter
 
-
 // Main validation type
-type InternalValidateTranslation<T, Formatters extends string, KeyPath extends string = ''> = T extends Record<string, any>
-	? { [K in keyof T]: InternalValidateTranslation<T[K], Formatters, KeyPath extends '' ? K & string : `${KeyPath}.${K & string}`> }
+type InternalValidateTranslation<T, KeyPath extends string = ''> = T extends Record<string, any>
+	? { [K in keyof T]: InternalValidateTranslation<T[K], KeyPath extends '' ? K & string : `${KeyPath}.${K & string}`> }
 	: T extends string
-	? ValidateFormatter<T, Formatters>
+	? ValidateFormatter<T>
 	: T;
 	
-export type ValidateTranslation<T, Formatters extends string> = RemoveReadonlyDeep<InternalValidateTranslation<T, BaseFormatters | Formatters >>;
+export type ValidateTranslation<T> = RemoveReadonlyDeep<InternalValidateTranslation<T>>;
 
 export type EnsureValidTranslation<T extends never> = T;

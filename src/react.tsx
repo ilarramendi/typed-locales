@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
-import { getTranslate, type Translations, type Locales, type ExtraFormatters } from '../index';
+import { getTranslate, type Locales, type ExtraFormatters, type OtherTranslations, type Translations } from '../index';
+
 export interface TranslationContextType {
 	isLoading: boolean;
 	locale: Locales;
@@ -10,7 +11,7 @@ export interface TranslationContextType {
 
 // Initial translation always should be loaded
 export const initReact = (
-	allTranslations: Record<Locales, Translations | (() => Promise<Translations>)>,
+	allTranslations: Record<Locales, OtherTranslations | (() => Promise<OtherTranslations>)>,
 	initialLocale: Locales,
 	extraFormatters: ExtraFormatters,
 ) => {
@@ -25,7 +26,7 @@ export const initReact = (
 		const loadTranslation = async (targetLocale: Locales) => {
 			try {
 				const translationOrLoader = allTranslations[targetLocale];
-				let translationData: Translations;
+				let translationData: OtherTranslations;
 
 				if (typeof translationOrLoader === 'function') {
 					setIsLoading(true);
@@ -34,7 +35,7 @@ export const initReact = (
 					translationData = translationOrLoader;
 				}
 
-				setTranslate(getTranslate(translationData, targetLocale, extraFormatters) as TranslationContextType['t']);
+				setTranslate(getTranslate(translationData as Translations, targetLocale, extraFormatters) as TranslationContextType['t']);
 			} catch (error) {
 				console.error(`Failed to load translations for locale ${String(targetLocale)}:`, error);
 			} finally {
