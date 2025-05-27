@@ -1,52 +1,37 @@
 import React, { createContext, useContext, useState } from 'react';
 
-import { type DeepStringify, getTranslate } from '../index';
-import type { Formatter } from './formatters';
-
-type TranslationLoader<T> = (() => Promise<T>) | T;
+import { getTranslate, type Translations, type Locales, type ExtraFormatters } from '../index';
+export interface TranslationContextType {
+	isLoading: boolean;
+	locale: Locales;
+	setLocale: (locale: Locales) => void;
+	t: ReturnType<typeof getTranslate>;
+}
 
 // Initial translation always should be loaded
-export const initReact = <
-	Translation,
-	Locales extends string,
-	ExtraFormattersType extends string = string,
-	ExtraFormatters extends Record<ExtraFormattersType, Formatter> = Record<ExtraFormattersType, Formatter>,
-	SimplifiedTranslation = DeepStringify<Translation>,
-	Translations extends Record<Locales, TranslationLoader<SimplifiedTranslation>> = Record<
-		Locales,
-		TranslationLoader<SimplifiedTranslation>
-	>,
->(
-	translations: Translations,
+export const initReact = (
+	allTranslations: Record<Locales, Translations | (() => Promise<Translations>)>,
 	initialLocale: Locales,
-	extraFormatters?: ExtraFormatters,
+	extraFormatters: ExtraFormatters,
 ) => {
-	interface TranslationContextType {
-		isLoading: boolean;
-		locale: Locales;
-		setLocale: (locale: Locales) => void;
-		t: ReturnType<typeof getTranslate<Translation, ExtraFormattersType>>;
-	}
-
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
-
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const [locale, setLocale] = useState<Locales>(initialLocale);
 		const [translate, setTranslate] = useState(() =>
-			getTranslate(translations[locale] as Translation, locale, extraFormatters) as TranslationContextType['t'],
+			getTranslate(allTranslations[locale] as Translations, locale, extraFormatters) as TranslationContextType['t'],
 		);
 		const [isLoading, setIsLoading] = useState(true);
 
 		const loadTranslation = async (targetLocale: Locales) => {
 			try {
-				const translationOrLoader = translations[targetLocale];
-				let translationData: Translation;
+				const translationOrLoader = allTranslations[targetLocale];
+				let translationData: Translations;
 
 				if (typeof translationOrLoader === 'function') {
 					setIsLoading(true);
 					translationData = await translationOrLoader();
 				} else {
-					translationData = translationOrLoader as Translation;
+					translationData = translationOrLoader;
 				}
 
 				setTranslate(getTranslate(translationData, targetLocale, extraFormatters) as TranslationContextType['t']);

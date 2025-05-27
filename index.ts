@@ -4,7 +4,18 @@ import type { Formatter } from './src/formatters';
 // Possible value types passed as parameters
 type ValueType = null | number | string | undefined | object;
 
-export type BaseFormatters = keyof typeof baseFormatters;
+export interface DefaultOverrides {
+	shape: any;
+	extraFormatters?: Record<string, Formatter>;
+	locales: string;
+};
+export interface Overrides  extends DefaultOverrides {};
+export type Translations = Overrides['shape'];
+export type Locales = Overrides['locales'];
+export type BaseFormatters = typeof baseFormatters;
+export type ExtraFormatters = Overrides['extraFormatters'];
+export type Formatters = BaseFormatters | ExtraFormatters;
+export type PossibleTranslationKeys = DotNestedLeafKeys<Translations>;
 
 // Remove const from object type
 export type InternalDeepStringify<T> = {
@@ -72,16 +83,18 @@ type HasPluralKeys<T, Path extends string> = Path extends `${infer K}.${infer Re
 	: PluralKeys<Path> & keyof T extends never
 	? false
 	: true;
-type IsPlural<T, Path extends string> = HasPluralKeys<T, Path>;
+type IsPlural<Path extends string> = HasPluralKeys<Translations, Path>;
 
 // Get value(s) for a key (handles both regular and plural)
-type GetValue<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
+type InternalGetValue<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
 	? K extends keyof T
-	? GetValue<T[K], Rest>
+	? InternalGetValue<T[K], Rest>
 	: never
 	: Path extends keyof T
 	? T[Path]
 	: T[PluralKeys<Path> & keyof T];
+
+type GetValue<Path extends string> = InternalGetValue<Translations, Path>;
 
 // Interpolation properties based on key type
 type InterpolationProperties<
@@ -123,39 +136,30 @@ type DeepOmitNever<T> = {
 // Given a complex object type simplify it
 export type Simplify<T> = InternalSimplify<DeepOmitNever<T>>;
 
-
-
-
 // Given a translations object returns a function that can be used to translate keys
-export const getTranslate = <
-	Translations,
-	ExtraFormattersType extends string = string,
-	ExtraFormatters extends Record<ExtraFormattersType, Formatter> = Record<ExtraFormattersType, Formatter>,
->(translations: Translations, locale: string, extraFormatters?: ExtraFormatters) => {
-	type PossibleKeys = DotNestedLeafKeys<Translations>;
-	type Formatters = BaseFormatters | ExtraFormattersType;
-	const formatters = { ...baseFormatters, ...extraFormatters } as Record<Formatters, Formatter>;
+export const getTranslate = (translations: Translations, locale: Locales, extraFormatters: ExtraFormatters) => {
+	const formatters = { ...baseFormatters, ...extraFormatters } as Formatters;
 
 	/**
 	 * Given a key returns the translated value
 	 * Supports nested keys, substitutions and plurals
 	 */
 	function translate<
-		Key extends PossibleKeys
+		Key extends PossibleTranslationKeys
 	>(
 			key: Key,
 			...arguments_: InterpolationProperties<
-				GetValue<Translations, Key> & string,
-				IsPlural<Translations, Key>
+				GetValue<Key>,
+				IsPlural<Key>
 			> extends Record<string, never>
 				? []
 				: [
 					params: Simplify<
-						InterpolationProperties<GetValue<Translations, Key> & string, IsPlural<Translations, Key>>
-					>,
+						InterpolationProperties<GetValue<Key> & string, IsPlural<Key>>
+					>,	
 				]
-	): GetValue<Translations, Key> {
-		type Value = GetValue<Translations, Key>;
+	): GetValue<Key> {
+		type Value = GetValue<Key>;
 
 		const parts = key.split('.');
 		let current = translations;
@@ -240,4 +244,4 @@ export { initReact } from './src/react';
 
 export { type Formatter, default as defaultFormatters } from './src/formatters';
 
-export { type ValidateTranslation, type EnsureValidTranslation } from './src/validation';
+export { type ValidateTranslation as ValidateTranslationInternal, type EnsureValidTranslation } from './src/validation';
