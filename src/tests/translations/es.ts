@@ -1,6 +1,6 @@
-import { type EnsureValidTranslation, type TranslationType, type ValidateTranslation } from '../../../index';
+import { type EnsureValidTranslation, type TranslationType, type ValidateTranslation } from '../../index';
 
-let test: EnsureValidTranslation<ValidateTranslation<typeof es>>;
+let test: EnsureValidTranslation<ValidateTranslation<typeof es>> = 0;
 void test;
 const es = {
 	test: 'Regular translation',

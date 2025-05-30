@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-import { getTranslate, type Formatter, type Locales, type TranslationType, type Translations } from '../index';
+import { getTranslate, type ExtraFormatters, type Formatter, type Locales, type TranslationType } from './index';
 
 export interface TranslationContextType {
 	isLoading: boolean;
@@ -14,7 +14,7 @@ export const initReact = (
 	initialTranslation: TranslationType,
 	initialLocale: Locales,
 	allTranslations: Record<Locales, TranslationType | (() => Promise<TranslationType>)>,
-	extraFormatters: Record<string, Formatter>,
+	extraFormatters: ExtraFormatters,
 ) => {
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {

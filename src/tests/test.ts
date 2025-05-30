@@ -1,12 +1,12 @@
 import en from './translations/en';
 import es from './translations/es';
-import { getTranslate } from '../..';
+import { getTranslate } from '..';
 
 const customFormatters = {
 	myCustomFormatter: () => 'Hello im custom',
 } as const;
 
-declare module '../../index' {
+declare module '../../src/index' {
 	interface Overrides {
 		shape: typeof en;
 		locales: 'en' | 'es';

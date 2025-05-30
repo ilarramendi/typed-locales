@@ -1,4 +1,4 @@
-import type { FormatterTypes } from "../index";
+import type { FormatterTypes } from "./index";
 
 type ErrorMessage<Value extends string, T extends string> = `You are using an invalid formatter: ${T} in: "${Value}"`;
 
@@ -78,4 +78,4 @@ export type ValidateTranslation<T> = RemoveNeverDeep<InternalValidateTranslation
  * Utility type to ensure there is no validation errors
  * 
  * */ 
-export type EnsureValidTranslation<T extends never> = T | undefined;
+export type EnsureValidTranslation<T extends never> = T | number;

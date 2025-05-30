@@ -1,2 +1,3 @@
 Fallback language
 Allow using some of the plural in a language but not in the other (both need to use at least one way)
+Add an option that dosnt force you to define all plural types

@@ -1,6 +1,6 @@
 {
   "name": "typed-locales",
-  "version": "1.0.10",
+  "version": "1.0.29",
   "description": "Type safe utilities for translating strings",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
