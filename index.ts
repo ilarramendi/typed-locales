@@ -1,100 +1,90 @@
-import baseFormatters from './src/formatters';
-import type { Formatter } from './src/formatters';
+import baseFormatters from "./src/formatters";
+import formatters, { type Formatter } from "./src/formatters";
 
 // Possible value types passed as parameters
 type ValueType = null | number | string | undefined | object;
 
 export interface DefaultOverrides {
-	shape: any;
+	shape: object;
 	extraFormatters?: Record<string, Formatter>;
 	locales: string;
-};
-export interface Overrides  extends DefaultOverrides {};
-export type Translations = Overrides['shape'];
-export type OtherTranslations = DeepStringify<Translations>;
-export type TranslationSchema = GenerateTranslationType<Translations>;
-export type Locales = Overrides['locales'];
-export type BaseFormatters = typeof baseFormatters;
-export type ExtraFormatters = Overrides['extraFormatters'];
-export type Formatters = BaseFormatters & ExtraFormatters;
-export type FormattersKeys = keyof Formatters;
+	validateFormatters: true;
+}
+export interface Overrides extends DefaultOverrides {}
+export type Translations = Overrides["shape"];
+export type TranslationType = DeepResolve<GenerateTranslationType<Translations>>
+export type Locales = Overrides["locales"];
 export type PossibleTranslationKeys = DotNestedLeafKeys<Translations>;
+export type ExtraFormatters = Overrides['extraFormatters'];
+export type FormatterTypes = keyof ExtraFormatters | keyof typeof formatters;
+// TODO add more
+const pluralSufixes = ["_none", "_one", "_other"] as const;
+type PluralSuffix = (typeof pluralSufixes)[number];
 
-// Remove const from object type
-export type InternalDeepStringify<T> = {
-	[K in keyof T]: T[K] extends string ? string : T[K] extends object ? InternalDeepStringify<T[K]> : never;
-};
-
-export type DeepStringify<T> = RemoveReadonlyDeep<InternalDeepStringify<T>>;
-
-export type InternalRemoveReadonlyDeep<T> = {
-	-readonly [K in keyof T]: T[K] extends object ? InternalRemoveReadonlyDeep<T[K]> : T[K];
-};
-
-export type RemoveReadonlyDeep<T> = Simplify<InternalRemoveReadonlyDeep<T>>;
-
-
-// Plural suffixes as a union type
-type PluralSuffix = '_none' | '_one' | '_other';
-
-export type TranslationType = {
-	[key: string]: string | TranslationType;
-};
+type BaseTranslationType = {
+	[K: string]: string | BaseTranslationType
+}
 
 // Remove plural suffix from a key
-type RemovePluralSuffix<T extends string> = T extends `${infer Base}${PluralSuffix}` ? Base : T;
+type RemovePluralSuffix<T extends string> =
+	T extends `${infer Base}${PluralSuffix}` ? Base : T;
 
 // Get all plural keys for a base key
 type PluralKeys<Base extends string> = `${Base}${PluralSuffix}`;
 
 type DotNestedLeafKeys<T> = {
 	[K in keyof T]: K extends string
-	? T[K] extends Record<string, any>
-	? `${K}.${DotNestedLeafKeys<T[K]>}`
-	: RemovePluralSuffix<K>
-	: never;
+		? T[K] extends Record<string, any>
+			? `${K}.${DotNestedLeafKeys<T[K]>}`
+			: RemovePluralSuffix<K>
+		: never;
 }[keyof T];
 
-// Given a string properties generated from the base translation, generate a generic string type for all translations
-type GenerateStringFromProperties<T extends Record<string, any>> =
-	T extends Record<string, never>
-	? string
-	: `${string}{${keyof T & string}${string}` | `${string}{${keyof T & string}|${string}}${string}`;
-
-
-// TODO for multi value keys we have to merge the 
 export type GenerateTranslationType<T> = {
-	-readonly [K in keyof T]: T[K] extends object
-	? Simplify<GenerateTranslationType<T[K]>>
-	: GenerateStringFromProperties<InterpolationProperties<RemovePluralSuffix<T[K] & string>, IsPlural<RemovePluralSuffix<K & string>>>>;
+	[K in keyof T as IsPlural<RemovePluralSuffix<K & string>> extends true
+	? K | PluralKeys<RemovePluralSuffix<K & string>>
+	: K
+	]: IsPlural<RemovePluralSuffix<K & string>> extends true
+	? (T[K] extends object ? GenerateTranslationType<T[K]> : string) | undefined
+	: T[K] extends object
+	? GenerateTranslationType<T[K]>
+	: string
 };
 
 // Extract placeholders from a string
 type ExtractPlaceholders<T extends string> =
 	T extends `${infer _Start}{${infer Placeholder}}${infer Rest}`
-	? (Placeholder extends `${infer Name}|${infer _Formatters}`
-		? Name
-		: Placeholder) | ExtractPlaceholders<Rest>
-	: never;
+		?
+				| (Placeholder extends `${infer Name}|${infer _Formatters}`
+						? Name
+						: Placeholder)
+				| ExtractPlaceholders<Rest>
+		: never;
 
 // Check if the key is plural
-type HasPluralKeys<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
+type HasPluralKeys<
+	T,
+	Path extends string,
+> = Path extends `${infer K}.${infer Rest}`
 	? K extends keyof T
-	? HasPluralKeys<T[K], Rest>
-	: false
+		? HasPluralKeys<T[K], Rest>
+		: false
 	: PluralKeys<Path> & keyof T extends never
-	? false
-	: true;
+		? false
+		: true;
 type IsPlural<Path extends string> = HasPluralKeys<Translations, Path>;
 
 // Get value(s) for a key (handles both regular and plural)
-type InternalGetValue<T, Path extends string> = Path extends `${infer K}.${infer Rest}`
+type InternalGetValue<
+	T,
+	Path extends string,
+> = Path extends `${infer K}.${infer Rest}`
 	? K extends keyof T
-	? InternalGetValue<T[K], Rest>
-	: never
+		? InternalGetValue<T[K], Rest>
+		: never
 	: Path extends keyof T
-	? T[Path]
-	: T[PluralKeys<Path> & keyof T];
+		? T[Path]
+		: T[PluralKeys<Path> & keyof T];
 
 type GetValue<Path extends string> = InternalGetValue<Translations, Path>;
 
@@ -102,137 +92,129 @@ type GetValue<Path extends string> = InternalGetValue<Translations, Path>;
 type InterpolationProperties<
 	S extends string,
 	IsPlural extends boolean,
+	forceCount extends boolean,
 > = IsPlural extends true
-	? { count: number } & {
-		[K in Exclude<ExtractPlaceholders<S>, 'count'>]: ValueType;
-	}
+	? (forceCount extends true ? { count: number } : {}) & {
+			[K in Exclude<ExtractPlaceholders<S>, "count">]: ValueType;
+		}
 	: ExtractPlaceholders<S> extends never
-	? {}
-	: {
-		[K in ExtractPlaceholders<S>]: ValueType;
-	};
+		? {}
+		: {
+				[K in ExtractPlaceholders<S>]: ValueType;
+			};
 
-// Transform a complex typescript union object to a simple type
-type InternalSimplify<T> = {
-	[K in keyof T]: InternalSimplify<T[K]>;
-	// eslint-disable-next-line sonarjs/no-useless-intersection
-} & {};
-
-type DeepOmitNever<T> = {
-	[K in keyof T as T[K] extends never 
-		? never 
-		: T[K] extends Record<string, any>
-			? DeepOmitNever<T[K]> extends never
-				? never
-				: K
-			: K
-	]: T[K] extends Record<string, any>
-		? DeepOmitNever<T[K]>
-		: T[K];
-} extends infer U
-	? keyof U extends never
-		? never
-		: U
-	: never;
-
-// Given a complex object type simplify it
-export type Simplify<T> = InternalSimplify<DeepOmitNever<T>>;
+export type DeepResolve<T> = T extends (...args: any[]) => any
+	? T
+	: T extends object
+		? { -readonly [K in keyof T]: DeepResolve<T[K]> }
+		: T;
 
 // Given a translations object returns a function that can be used to translate keys
-export const getTranslate = (translations: Translations, locale: Locales, extraFormatters: ExtraFormatters) => {
-	const formatters = { ...baseFormatters, ...extraFormatters } as Formatters;
+export const getTranslate = (
+	translations: TranslationType,
+	locale: Locales,
+	extraFormatters: ExtraFormatters,
+) => {
+	const formatters = { ...baseFormatters, ...extraFormatters } ;
 
 	/**
 	 * Given a key returns the translated value
 	 * Supports nested keys, substitutions and plurals
 	 */
-	function translate<
-		Key extends PossibleTranslationKeys
-	>(
-			key: Key,
-			...arguments_: InterpolationProperties<
-				GetValue<Key>,
-				IsPlural<Key>
-			> extends Record<string, never>
-				? []
-				: [
-					params: Simplify<
-						InterpolationProperties<GetValue<Key> & string, IsPlural<Key>>
-					>,	
-				]
+	function translate<Key extends PossibleTranslationKeys>(
+		key: Key,
+		...arguments_: InterpolationProperties<
+			GetValue<Key>,
+			IsPlural<Key>,
+			true
+		> extends Record<string, never>
+			? []
+			: Key extends PossibleTranslationKeys
+				? [
+						params: InterpolationProperties<
+								GetValue<Key> & string,
+								IsPlural<Key>,
+								true
+							>
+					]
+				: []
 	): GetValue<Key> {
 		type Value = GetValue<Key>;
 
-		const parts = key.split('.');
-		let current = translations;
+		const parts = key.split(".");
+		const parameters = arguments_[0] as Record<string, ValueType>;
+		let current = translations as BaseTranslationType;
+		let value = key as string;
+		let isPlural = false;
+		let lastPart = "";
 		for (const part of parts) {
-			// @ts-expect-error
 			if (current && current[part]) {
-				// @ts-expect-error
+				if (typeof current[part] === "string") {
+					value = current[part];
+					break;
+				}
 				current = current[part];
 			} else {
-				break;
+				lastPart = parts.at(-1)!;
+				isPlural = pluralSufixes.some(
+					(sufix) => current[lastPart + sufix] !== undefined,
+				);
+				if (!isPlural) {
+					console.error(`Translation key "${key}" not found`);
+					return value as Value;
+				}
 			}
 		}
 
-		// eslint-disable-next-line sonarjs/different-types-comparison
-		if (current === undefined) {
-			console.error(`Translation key "${key}" not found`);
+		// Handle plural keys
+		if (isPlural) {
+			if (typeof parameters?.count === 'undefined') {
+				console.error(`Missing count value for plural key "${key}"`);
+				return key as Value;
+			}
+			const count = Number(parameters.count);
+			const none = current[`${lastPart}_none`];
+			const one = current[`${lastPart}_one`];
+			const other = current[`${lastPart}_other`];
 
-			return key as unknown as Value;
-		}
-
-		if (typeof current === 'object') {
-			// If its an object being returned check if its a plural key
-			const isPlural =
-				// @ts-expect-error
-				current[`${parts.at(-1)}_none`] !== undefined ||
-				// @ts-expect-error
-				current[`${parts.at(-1)}_one`] !== undefined ||
-				// @ts-expect-error
-				current[`${parts.at(-1)}_other`] !== undefined;
-			if (isPlural) {
-				if (!arguments_[0] || !Object.hasOwn(arguments_[0], 'count')) {
-					console.error(`Missing count value for plural key "${key}"`);
-
-					return key as unknown as Value;
-				}
-				// @ts-expect-error
-				const count = Number(arguments_[0].count);
-				if (!count) {
-					// @ts-expect-error
-					current = current[`${parts.at(-1)}_none`];
-				} else if (count === 1) {
-					// @ts-expect-error
-					current = current[`${parts.at(-1)}_one`];
-				} else {
-					// @ts-expect-error
-					current = current[`${parts.at(-1)}_other`];
-				}
+			if (!count && typeof none === "string") {
+				value = none;
+			} else if (count === 1 && typeof one === "string") {
+				value = one;
+			} else if (typeof other === "string") {
+				value = other;
 			} else {
-				console.error(`Incomplete translation key "${key}"`);
-
-				return key as unknown as Value;
+				console.warn(
+					`'Missing other translation for: ${key} with count ${count}`,
+				);
+				return key as Value;
 			}
 		}
 
-		let value = String(current);
-		const parameters = arguments_[0];
 		if (parameters) {
 			for (const [parameter, value_] of Object.entries(parameters)) {
-				value = value.replaceAll(new RegExp(`{${parameter}(\\|[a-z|]+)?}`, 'g'), (match, formatters_) => {
-					const parsedFormatters = (formatters_?.split('|').filter(Boolean) ?? []) as FormattersKeys[];
-					let formattedValue = String(value_);
-					for (const formatter of parsedFormatters) {
-						if (!formatters[formatter]) {
-							console.error(`Formatter "${formatter}" not found used in key "${key}"`);
+				value = value.replaceAll(
+					new RegExp(`{${parameter}(\\|[a-z|]+)?}`, "g"),
+					(match, formatters_) => {
+						const parsedFormatters = (formatters_?.split("|").filter(Boolean) ??
+							[]) as FormatterTypes[];
+						let formattedValue = String(value_);
+						for (const formatter of parsedFormatters) {
+							if (!formatters[formatter]) {
+								console.error(
+									`Formatter "${formatter}" not found used in key "${key}"`,
+								);
 
-							return match;
+								return match;
+							}
+							formattedValue = (formatters[formatter] as Formatter)(
+								formattedValue,
+								locale,
+							);
 						}
-						formattedValue = (formatters[formatter] as Formatter)(formattedValue, locale);
-					}
-					return formattedValue;
-				});
+						return formattedValue;
+					},
+				);
 			}
 		}
 
@@ -242,8 +224,11 @@ export const getTranslate = (translations: Translations, locale: Locales, extraF
 	return translate;
 };
 
-export { initReact } from './src/react';
+export { initReact } from "./src/react";
 
-export { type Formatter, default as defaultFormatters } from './src/formatters';
+export { type Formatter, default as defaultFormatters } from "./src/formatters";
 
-export { type ValidateTranslation, type EnsureValidTranslation } from './src/validation';
+export {
+	type ValidateTranslation,
+	type EnsureValidTranslation,
+} from "./src/validation";

@@ -1,4 +1,4 @@
-import type { FormattersKeys, RemoveReadonlyDeep } from "../index";
+import type { FormatterTypes } from "../index";
 
 type ErrorMessage<Value extends string, T extends string> = `You are using an invalid formatter: ${T} in: "${Value}"`;
 
@@ -30,7 +30,7 @@ type BalancedBraces<T extends string> =
 type ValidateFormatter<T extends string> =
 	ExtractFormatter<T> extends never
 	? BalancedBraces<T> // No formatter found
-	: ExtractFormatter<T> extends FormattersKeys
+	: ExtractFormatter<T> extends FormatterTypes
 	? BalancedBraces<T> // Valid formatter
 	: ErrorMessage<T, ExtractFormatter<T>>; // Invalid formatter
 
@@ -39,8 +39,43 @@ type InternalValidateTranslation<T, KeyPath extends string = ''> = T extends Rec
 	? { [K in keyof T]: InternalValidateTranslation<T[K], KeyPath extends '' ? K & string : `${KeyPath}.${K & string}`> }
 	: T extends string
 	? ValidateFormatter<T>
-	: T;
-	
-export type ValidateTranslation<T> = RemoveReadonlyDeep<InternalValidateTranslation<T>>;
+	: never;
 
-export type EnsureValidTranslation<T extends never> = T;
+type RemoveNeverDeep<T> = T extends Record<string, any>
+	? {
+		-readonly [K in keyof T as T[K] extends Record<string, any>
+		? RemoveNeverDeep<T[K]> extends never
+		? never
+		: K
+		: [T[K]] extends [never]
+		? never
+		: K]: T[K] extends Record<string, any>
+		? RemoveNeverDeep<T[K]>
+		: T[K];
+	} extends Record<string, never>
+	? never
+	: {
+	-readonly [K in keyof T as T[K] extends Record<string, any>
+		? RemoveNeverDeep<T[K]> extends never
+		? never
+		: K
+		: [T[K]] extends [never]
+		? never
+		: K]: T[K] extends Record<string, any>
+		? RemoveNeverDeep<T[K]>
+		: T[K];
+	}
+	: T;
+
+/**
+ * Utility type to check if translation brackets are used incorrectly or a invalid formatter is used
+ * 
+ * Should be used with EnsureValidTranslation
+ * */ 
+export type ValidateTranslation<T> = RemoveNeverDeep<InternalValidateTranslation<T>>;
+
+/**
+ * Utility type to ensure there is no validation errors
+ * 
+ * */ 
+export type EnsureValidTranslation<T extends never> = T | undefined;

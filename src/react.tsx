@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-import { getTranslate, type Locales, type ExtraFormatters, type OtherTranslations, type Translations } from '../index';
+import { getTranslate, type Formatter, type Locales, type TranslationType, type Translations } from '../index';
 
 export interface TranslationContextType {
 	isLoading: boolean;
@@ -11,22 +11,23 @@ export interface TranslationContextType {
 
 // Initial translation always should be loaded
 export const initReact = (
-	allTranslations: Record<Locales, OtherTranslations | (() => Promise<OtherTranslations>)>,
+	initialTranslation: TranslationType,
 	initialLocale: Locales,
-	extraFormatters: ExtraFormatters,
+	allTranslations: Record<Locales, TranslationType | (() => Promise<TranslationType>)>,
+	extraFormatters: Record<string, Formatter>,
 ) => {
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const [locale, setLocale] = useState<Locales>(initialLocale);
 		const [translate, setTranslate] = useState(() =>
-			getTranslate(allTranslations[locale] as Translations, locale, extraFormatters) as TranslationContextType['t'],
+			getTranslate(initialTranslation, locale, extraFormatters),
 		);
 		const [isLoading, setIsLoading] = useState(true);
 
 		const loadTranslation = async (targetLocale: Locales) => {
 			try {
 				const translationOrLoader = allTranslations[targetLocale];
-				let translationData: OtherTranslations;
+				let translationData: TranslationType;
 
 				if (typeof translationOrLoader === 'function') {
 					setIsLoading(true);
@@ -35,7 +36,7 @@ export const initReact = (
 					translationData = translationOrLoader;
 				}
 
-				setTranslate(getTranslate(translationData as Translations, targetLocale, extraFormatters) as TranslationContextType['t']);
+				setTranslate(getTranslate(translationData, targetLocale, extraFormatters));
 			} catch (error) {
 				console.error(`Failed to load translations for locale ${String(targetLocale)}:`, error);
 			} finally {

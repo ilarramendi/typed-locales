@@ -1,36 +1,19 @@
-import type { EnsureValidTranslation, ValidateTranslation, TranslationSchema } from '../../../index';
+import { type EnsureValidTranslation, type TranslationType, type ValidateTranslation } from '../../../index';
 
-type _test = EnsureValidTranslation<ValidateTranslation<typeof es>>;
+let test: EnsureValidTranslation<ValidateTranslation<typeof es>>;
+void test;
 const es = {
-	test: 'Traducción regular',
+	test: 'Regular translation',
 	nested: {
-		test: 'Anidado {translation|myCustomFormatter}',
+		test: 'Nested',
 		deep: {
-			again: 'Anidado nuevamente con {value} y {otherValue}',
+			again: 'Nested again',
 		},
 	},
-	withValue: 'Con valor {value}',
-	multipleValues: 'Múltiples valores: {one}, {two} y {three}',
-	// @ts-expect-error
-	examplePlural_none: 'No hay elementos disponibles',
-	// @ts-expect-error
-	examplePlural_one: 'Un elemento disponible',
-	examplePlural_other: '{count} elementos disponibles',
-	examplePluralWithOtherValues_none: 'No hay elementos para {user}',
-	examplePluralWithOtherValues_one: 'Un elemento para {user}',
-	examplePluralWithOtherValues_other: '{count} elementos para {user} y {otherUser}',
-	exampleWithFormatting: 'Texto formateado {value|uppercase} y {other|lowercase}',
-	exampleWithJSONFormatter: 'Formateador JSON: {data|json}',
-	pluralWithNestedSubstitution_none: 'No se encontraron resultados para {query}',
-	pluralWithNestedSubstitution_one: 'Un resultado para {query} con {user|capitalize}',
-	pluralWithNestedSubstitution_other: '{count} resultados para {query} por {user|capitalize}',
-	mixedPluralNested_none: 'No hay {itemType} en {location}',
-	mixedPluralNested_one: 'Un {itemType} en {location|uppercase}',
-	mixedPluralNested_other: '{count} {itemType}s en {location|uppercase}',
-	onlyFormat: 'Solo formateo: {value|capitalize}',
-	escapeBraces: 'Llaves como estas: \\{notAKey\\}',
-
-} as const satisfies TranslationSchema;
+	test2_none: 'Plural none (not in en)',
+	test2_one: undefined, // Key not used
+	test2_other: 'Plural other {count|uppercase}'
+} as const satisfies TranslationType;
 
 export default es;
 
