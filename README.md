@@ -338,7 +338,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-ISC License - see LICENSE file for details.
+GNU Lesser General Public License v2.1 - see LICENSE file for details.
 
 ---
 
