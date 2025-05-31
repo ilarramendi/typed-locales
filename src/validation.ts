@@ -2,20 +2,7 @@ import type { FormatterTypes, TypeMap } from "./index";
 
 type ErrorMessage<Value extends string, T extends string> = `You are using an invalid formatter: ${T} in: "${Value}"`;
 type InvalidTypeError<Value extends string, T extends string> = `You are using an invalid type: ${T} in: "${Value}"`;
-
-// Extract formatter from {data|formatter} or {data:type|formatter} pattern
-type ExtractFormatter<T extends string> =
-	T extends `${string}{${string}|${infer F}}${string}` ? F : never;
-
-// Extract type annotation from {data:type} or {data:type|formatter} pattern
-type ExtractTypeAnnotation<T extends string> =
-	T extends `${string}{${infer Content}}${string}`
-	? Content extends `${string}:${infer Type}|${string}`
-	? Type
-	: Content extends `${string}:${infer Type}`
-	? Type
-	: never
-	: never;
+type EmptyBracesError<Value extends string> = `Empty braces {} are not allowed in: "${Value}"`;
 
 // Extract all type annotations from a string
 type ExtractAllTypes<T extends string, Acc extends string = never> =
@@ -61,6 +48,12 @@ type BalancedBraces<T extends string> =
 	? never // Brackets are balanced
 	: `Brackets are not balanced in: "${T}"` // Brackets are not balanced
 
+// Check for empty braces {}
+type HasEmptyBraces<T extends string> =
+	T extends `${string}{}${string}`
+	? EmptyBracesError<T>
+	: never;
+
 // Validate type annotations
 type ValidateTypes<T extends string> =
 	ExtractAllTypes<T> extends never
@@ -80,6 +73,7 @@ type ValidateFormatters<T extends string> =
 // Combined validation
 type ValidateTranslationString<T extends string> =
 	| BalancedBraces<T>
+	| HasEmptyBraces<T>
 	| ValidateTypes<T>
 	| ValidateFormatters<T>;
 
@@ -118,7 +112,7 @@ type RemoveNeverDeep<T> = T extends Record<string, any>
 
 /**
  * Utility type to check if translation brackets are used incorrectly, 
- * invalid formatter is used, or invalid type annotation is used
+ * invalid formatter is used, invalid type annotation is used, or empty braces are present
  * 
  * Should be used with EnsureValidTranslation
  * */

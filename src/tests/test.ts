@@ -1,10 +1,15 @@
 import en from './translations/en';
 import es from './translations/es';
-import { getTranslate } from '..';
+import { getTranslate, type Formatter } from '..';
 
 const customFormatters = {
-	myCustomFormatter: () => 'Hello im custom',
-} as const;
+	// Make one char uppercase and one lower interchangebly
+	customFormatter: (value) => value
+		?.toString()	
+		.split('')
+		.map((v, i) => (i % 2 ? v.toUpperCase() : v.toLowerCase()))
+		.join('') ?? '',
+} as const satisfies Record<string, Formatter>;
 
 declare module '../../src/index' {
 	interface Overrides {
@@ -15,24 +20,22 @@ declare module '../../src/index' {
 }
 
 const defaultTranslate = getTranslate(en, 'en-US', customFormatters);
-// @ts-expect-error -- Missing key test...
 const translate = getTranslate(es, 'es-ES', customFormatters, defaultTranslate);
 
 const result = {
 	test: translate('test', {
-		who: 'mundo'
+		who: 'mundo' // Only string allowed
 	}),
 	nested: {
-		test: translate('nested.test'), // Fallbacks to EN
 		deep: {
 			again: translate('nested.deep.again', {
 				value: 100000000 // Only number allowed
 			}),
 		},
 	},
-	test2_none: translate('test2', {count: 0 }),
+	test2_none: translate('test2', {count: 0 }), // Count prop from plurals is always number
 	test2_one: translate('test2', { count: 1 }),
 	test2_other: translate('test2', { count: 69 }),
+	customFormatter: translate('customFormatter', {data: 'custom formatter data'})
 }
-
 console.log(result);

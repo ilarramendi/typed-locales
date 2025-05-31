@@ -238,7 +238,7 @@ export const getTranslate = (
 		if (parameters) {
 			for (const [parameter, value_] of Object.entries(parameters)) {
 				value = value.replaceAll(
-					new RegExp(`{${parameter}(:[a-z]+)?(\\|[a-z|]+)?}`, "g"),
+					new RegExp(`{${parameter}(:\w+)?(\\|[\w|]+)?}`, "g"),
 					(match, _type, formatters_) => {
 						const parsedFormatters = (formatters_?.split("|").filter(Boolean) ??
 							[]) as FormatterTypes[];
