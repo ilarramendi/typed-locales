@@ -2,7 +2,19 @@ import baseFormatters from "./formatters";
 import formatters, { type Formatter } from "./formatters";
 
 // Possible value types passed as parameters
-type ValueType = null | number | string | undefined | object;
+export type ValueType = null | number | string | undefined | object;
+
+// Type mapping from string type names to TypeScript types
+export type TypeMap = {
+	string: string;
+	number: number;
+	boolean: boolean;
+	object: object;
+	array: any[];
+	null: null;
+	undefined: undefined;
+	any: any;
+};
 
 export interface DefaultOverrides {
 	shape: object;
@@ -40,22 +52,52 @@ type DotNestedLeafKeys<T> = {
 	: never;
 }[keyof T];
 
+
 export type GenerateTranslationType<T> = {
 	[K in keyof T as IsPlural<RemovePluralSuffix<K & string>> extends true
-	? K | PluralKeys<RemovePluralSuffix<K & string>>
+	? never
 	: K
-	]: IsPlural<RemovePluralSuffix<K & string>> extends true
-	? (T[K] extends object ? GenerateTranslationType<T[K]> : string) | undefined
-	: T[K] extends object
-	? GenerateTranslationType<T[K]>
-	: string
+	]: T[K] extends object ? GenerateTranslationType<T[K]> : string
+} & {
+	[K in keyof T as IsPlural<RemovePluralSuffix<K & string>> extends true
+	? K | PluralKeys<RemovePluralSuffix<K & string>>
+	: never
+	]?: T[K] extends object ? GenerateTranslationType<T[K]> : string
 };
 
-// Extract placeholders from a string
+// Extract placeholder info including name and type
+type ExtractPlaceholderInfo<T extends string> =
+	T extends `${infer Name}:${infer Type}|${infer _Rest}`
+	? Type extends keyof TypeMap
+	? { name: Name; type: TypeMap[Type] }
+	: { name: Name; type: ValueType }
+	: T extends `${infer Name}:${infer Type}`
+	? Type extends keyof TypeMap
+	? { name: Name; type: TypeMap[Type] }
+	: { name: Name; type: ValueType }
+	: T extends `${infer Name}|${infer _Rest}`
+	? { name: Name; type: ValueType }
+	: { name: T; type: ValueType };
+
+// Extract all placeholders with their types from a string
+type ExtractPlaceholdersWithTypes<T extends string, Acc = never> =
+	T extends `${infer _Start}{${infer Placeholder}}${infer Rest}`
+	? ExtractPlaceholdersWithTypes<Rest, Acc | ExtractPlaceholderInfo<Placeholder>>
+	: Acc;
+
+// Convert placeholder info union to object type
+type PlaceholderInfoToObject<T> = {
+	[K in T extends { name: infer N extends string; type: any } ? N : never]:
+	T extends { name: K; type: infer Type } ? Type : never
+};
+
+// Extract placeholders from a string (for backward compatibility)
 type ExtractPlaceholders<T extends string> =
 	T extends `${infer _Start}{${infer Placeholder}}${infer Rest}`
 	?
-	| (Placeholder extends `${infer Name}|${infer _Formatters}`
+	| (Placeholder extends `${infer Name}:${infer _TypeAndFormatters}`
+		? Name
+		: Placeholder extends `${infer Name}|${infer _Formatters}`
 		? Name
 		: Placeholder)
 	| ExtractPlaceholders<Rest>
@@ -86,22 +128,19 @@ type InternalGetValue<
 	? T[Path]
 	: T[PluralKeys<Path> & keyof T];
 
-type GetValue<Path extends string> = InternalGetValue<Translations, Path>;
+type GetValue<Path extends string> = Exclude<InternalGetValue<Translations, Path>, undefined>;
 
-// Interpolation properties based on key type
+// Interpolation properties based on key type with type inference
 type InterpolationProperties<
 	S extends string,
 	IsPlural extends boolean,
 	forceCount extends boolean,
-> = IsPlural extends true
-	? (forceCount extends true ? { count: number } : {}) & {
-		[K in Exclude<ExtractPlaceholders<S>, "count">]: ValueType;
-	}
+> = DeepResolve<IsPlural extends true
+	? (forceCount extends true ? { count: number } : {}) &
+	PlaceholderInfoToObject<Exclude<ExtractPlaceholdersWithTypes<S>, { name: "count"; type: any }>>
 	: ExtractPlaceholders<S> extends never
 	? {}
-	: {
-		[K in ExtractPlaceholders<S>]: ValueType;
-	};
+	: PlaceholderInfoToObject<ExtractPlaceholdersWithTypes<S>>>;
 
 export type DeepResolve<T> = T extends (...args: any[]) => any
 	? T
@@ -118,14 +157,10 @@ export const getTranslate = (
 ) => {
 	const formatters = { ...baseFormatters, ...extraFormatters };
 
-	/**
-	 * Given a key returns the translated value
-	 * Supports nested keys, substitutions and plurals
-	 */
 	function translate<Key extends PossibleTranslationKeys>(
 		key: Key,
 		...arguments_: InterpolationProperties<
-			GetValue<Key> & string,
+			GetValue<Key>,
 			IsPlural<Key>,
 			true
 		> extends Record<string, never>
@@ -133,7 +168,7 @@ export const getTranslate = (
 			: Key extends PossibleTranslationKeys
 			? [
 				params: InterpolationProperties<
-					GetValue<Key> & string,
+					GetValue<Key>,
 					IsPlural<Key>,
 					true
 				>
@@ -203,8 +238,8 @@ export const getTranslate = (
 		if (parameters) {
 			for (const [parameter, value_] of Object.entries(parameters)) {
 				value = value.replaceAll(
-					new RegExp(`{${parameter}(\\|[a-z|]+)?}`, "g"),
-					(match, formatters_) => {
+					new RegExp(`{${parameter}(:[a-z]+)?(\\|[a-z|]+)?}`, "g"),
+					(match, _type, formatters_) => {
 						const parsedFormatters = (formatters_?.split("|").filter(Boolean) ??
 							[]) as FormatterTypes[];
 						let formattedValue = String(value_);

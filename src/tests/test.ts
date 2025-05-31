@@ -9,20 +9,25 @@ const customFormatters = {
 declare module '../../src/index' {
 	interface Overrides {
 		shape: typeof en;
-		locales: 'en' | 'es';
+		locales: 'en-US' | 'es-ES';
 		extraFormatters: typeof customFormatters
 	}
 }
 
-const defaultTranslate = getTranslate(en, 'en', customFormatters); 
-const translate = getTranslate(es, 'es', customFormatters, defaultTranslate);
+const defaultTranslate = getTranslate(en, 'en-US', customFormatters);
+// @ts-expect-error -- Missing key test...
+const translate = getTranslate(es, 'es-ES', customFormatters, defaultTranslate);
 
 const result = {
-	test: translate('test'),
+	test: translate('test', {
+		who: 'mundo'
+	}),
 	nested: {
-		test: translate('nested.test'),
+		test: translate('nested.test'), // Fallbacks to EN
 		deep: {
-			again: translate('nested.deep.again'),
+			again: translate('nested.deep.again', {
+				value: 100000000 // Only number allowed
+			}),
 		},
 	},
 	test2_none: translate('test2', {count: 0 }),

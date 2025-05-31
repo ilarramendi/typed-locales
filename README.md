@@ -10,7 +10,7 @@ A powerful, type-safe internationalization (i18n) library for TypeScript and Rea
 - 📊 **Pluralization**: Built-in plural form handling with customizable rules
 - 🎨 **Custom Formatters**: Extensible formatting system for dates, numbers, and custom transformations
 - ⚛️ **React Integration**: Ready-to-use React hooks and context providers
-- 🔧 **Developer Experience**: VS Code extension support with i18n-ally
+- 🔧 **Developer Experience**: VS Code extension support with i18n-ally and hover tooltips showing translation values
 - 📦 **Zero Dependencies**: Lightweight with minimal runtime overhead
 - 🚀 **Modern**: Built with ESM, supports tree-shaking
 - ✅ **Translation Validation**: Comprehensive compile-time validation for translation keys and formatters
@@ -123,6 +123,11 @@ console.log(translate('nested.welcome')); // "Bienvenido a nuestra aplicación"
 // If a key was missing in Spanish, it would show the English version
 ```
 
+**TypeScript IntelliSense Features:**
+- **Hover Tooltips**: When you hover over `translate('greeting')` in VS Code, you'll see the actual translation value
+- **Autocomplete**: Full IntelliSense for all available translation keys
+- **Type Safety**: Compile-time validation of translation keys and parameters
+
 **How Fallbacks Work:**
 - If a translation key is missing, it automatically uses the default language
 - Perfect for incomplete translations or gradual localization
@@ -159,7 +164,9 @@ function MyComponent() {
   return (
     <div>
       <h1>{t('nested.welcome')}</h1>
+      {/* Hover over t('nested.welcome') shows: "Welcome to our app" */}
       <p>{t('greeting', { name: 'User' })}</p>
+      {/* Hover shows: "Hello, {name}!" with parameter info */}
       
       <select value={locale} onChange={e => setLocale(e.target.value)}>
         <option value="en">English</option>
@@ -315,13 +322,15 @@ React hook returning `{ t, locale, setLocale, isLoading }`.
 
 ## 🛠️ Development Patterns
 
-### Lazy Loading
+### Lazy Loading with Fallbacks
 ```typescript
 const translations = {
   en: englishTranslations,
   es: () => import('./translations/es').then(m => m.default),
   fr: () => import('./translations/fr').then(m => m.default)
 };
+
+// React automatically handles fallbacks to the initial translation (en)
 ```
 
 ### Organizing Large Files
@@ -332,6 +341,19 @@ export const en = {
   ...pages,
   ...forms
 } as const;
+```
+
+### Gradual Translation Strategy
+```typescript
+// Start with partial translations
+const es = {
+  greeting: "¡Hola, {name}!",
+  // Leave other keys undefined - they'll fall back to English
+  nested: {
+    welcome: undefined, // Falls back to English
+    farewell: "¡Adiós, {name}!"
+  }
+} as const satisfies TranslationType;
 ```
 
 ## 🚨 Common Pitfalls
@@ -352,6 +374,16 @@ const es = { greeting: "¡Hola!" } as const;
 
 // ✅ Correct - validates structure and catches missing keys
 const es = { greeting: "¡Hola!" } as const satisfies TranslationType;
+```
+
+### Not Setting Up Fallbacks
+```typescript
+// ❌ Missing fallback - errors on missing keys
+const translate = getTranslate(partialSpanish, 'es', undefined);
+
+// ✅ With fallback - graceful degradation
+const defaultTranslate = getTranslate(en, 'en', undefined);
+const translate = getTranslate(partialSpanish, 'es', undefined, defaultTranslate);
 ```
 
 ### Not Adding Validation

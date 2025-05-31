@@ -1,4 +1,13 @@
-Fallback language
-Allow using some of the plural in a language but not in the other (both need to use at least one way)
-Add an option that dosnt force you to define all plural types
-Check for empty braces
+- Fallback language
+- Allow using some of the plural in a language but not in the other (both need to use at least one way)
+- Add an option that dosnt force you to define all plural types
+- Check for empty braces
+- Rich Text / JSX Rendering
+	Allow keys to render React nodes with dynamic placeholders or nested formatting.
+	t.rich('greeting', {
+		name: <strong>Jane</strong>
+	});
+- Typed parameters
+  - optional: "{param?number}"
+  - required: "{param:number}"
+Make formatters input type safe in the string (catch {test:date|uppercase})

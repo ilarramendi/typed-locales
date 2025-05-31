@@ -1,10 +1,45 @@
-import type { FormatterTypes } from "./index";
+import type { FormatterTypes, TypeMap } from "./index";
 
 type ErrorMessage<Value extends string, T extends string> = `You are using an invalid formatter: ${T} in: "${Value}"`;
+type InvalidTypeError<Value extends string, T extends string> = `You are using an invalid type: ${T} in: "${Value}"`;
 
-// Extract formatter from {data|formatter} pattern
+// Extract formatter from {data|formatter} or {data:type|formatter} pattern
 type ExtractFormatter<T extends string> =
 	T extends `${string}{${string}|${infer F}}${string}` ? F : never;
+
+// Extract type annotation from {data:type} or {data:type|formatter} pattern
+type ExtractTypeAnnotation<T extends string> =
+	T extends `${string}{${infer Content}}${string}`
+	? Content extends `${string}:${infer Type}|${string}`
+	? Type
+	: Content extends `${string}:${infer Type}`
+	? Type
+	: never
+	: never;
+
+// Extract all type annotations from a string
+type ExtractAllTypes<T extends string, Acc extends string = never> =
+	T extends `${infer Before}{${infer Content}}${infer After}`
+	? Content extends `${string}:${infer Type}|${string}`
+	? ExtractAllTypes<After, Acc | Type>
+	: Content extends `${string}:${infer Type}`
+	? ExtractAllTypes<After, Acc | Type>
+	: ExtractAllTypes<After, Acc>
+	: Acc;
+
+// Extract all formatters from a string
+type ExtractAllFormatters<T extends string, Acc extends string = never> =
+	T extends `${infer Before}{${infer Content}}${infer After}`
+	? Content extends `${string}|${infer Formatters}`
+	? ExtractAllFormatters<After, Acc | ExtractFormatterList<Formatters>>
+	: ExtractAllFormatters<After, Acc>
+	: Acc;
+
+// Extract individual formatters from a pipe-separated list
+type ExtractFormatterList<T extends string> =
+	T extends `${infer F}|${infer Rest}`
+	? F | ExtractFormatterList<Rest>
+	: T;
 
 type CountOpenBraces<T extends string, Count extends readonly unknown[] = []> =
 	T extends `${infer First}${infer Rest}`
@@ -26,19 +61,33 @@ type BalancedBraces<T extends string> =
 	? never // Brackets are balanced
 	: `Brackets are not balanced in: "${T}"` // Brackets are not balanced
 
-// Validate formatter and return error message if invalid
-type ValidateFormatter<T extends string> =
-	ExtractFormatter<T> extends never
-	? BalancedBraces<T> // No formatter found
-	: ExtractFormatter<T> extends FormatterTypes
-	? BalancedBraces<T> // Valid formatter
-	: ErrorMessage<T, ExtractFormatter<T>>; // Invalid formatter
+// Validate type annotations
+type ValidateTypes<T extends string> =
+	ExtractAllTypes<T> extends never
+	? never // No types found
+	: Exclude<ExtractAllTypes<T>, keyof TypeMap> extends never
+	? never // All types are valid
+	: InvalidTypeError<T, Exclude<ExtractAllTypes<T>, keyof TypeMap>>; // Invalid type found
+
+// Validate formatters
+type ValidateFormatters<T extends string> =
+	ExtractAllFormatters<T> extends never
+	? never // No formatters found
+	: Exclude<ExtractAllFormatters<T>, FormatterTypes> extends never
+	? never // All formatters are valid
+	: ErrorMessage<T, Exclude<ExtractAllFormatters<T>, FormatterTypes>>; // Invalid formatter found
+
+// Combined validation
+type ValidateTranslationString<T extends string> =
+	| BalancedBraces<T>
+	| ValidateTypes<T>
+	| ValidateFormatters<T>;
 
 // Main validation type
 type InternalValidateTranslation<T, KeyPath extends string = ''> = T extends Record<string, any>
 	? { [K in keyof T]: InternalValidateTranslation<T[K], KeyPath extends '' ? K & string : `${KeyPath}.${K & string}`> }
 	: T extends string
-	? ValidateFormatter<T>
+	? ValidateTranslationString<T>
 	: never;
 
 type RemoveNeverDeep<T> = T extends Record<string, any>
@@ -55,7 +104,7 @@ type RemoveNeverDeep<T> = T extends Record<string, any>
 	} extends Record<string, never>
 	? never
 	: {
-	-readonly [K in keyof T as T[K] extends Record<string, any>
+		-readonly [K in keyof T as T[K] extends Record<string, any>
 		? RemoveNeverDeep<T[K]> extends never
 		? never
 		: K
@@ -68,10 +117,11 @@ type RemoveNeverDeep<T> = T extends Record<string, any>
 	: T;
 
 /**
- * Utility type to check if translation brackets are used incorrectly or a invalid formatter is used
+ * Utility type to check if translation brackets are used incorrectly, 
+ * invalid formatter is used, or invalid type annotation is used
  * 
  * Should be used with EnsureValidTranslation
- * */ 
+ * */
 export type ValidateTranslation<T> = RemoveNeverDeep<InternalValidateTranslation<T>>;
 
 /**
@@ -85,5 +135,5 @@ export type ValidateTranslation<T> = RemoveNeverDeep<InternalValidateTranslation
  * ```
  * 
  * where `en` is your translation with `as const`
- * */ 
+ * */
 export type EnsureValidTranslation<T extends never> = T | any;

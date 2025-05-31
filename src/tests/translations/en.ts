@@ -3,16 +3,16 @@ import type { EnsureValidTranslation, TranslationType, ValidateTranslation } fro
 let test: EnsureValidTranslation<ValidateTranslation<typeof en>> = 0;
 void test;
 const en = {
-	test: 'Regular translation',
+	test: 'Hello {who:string|capitalize}!',
 	nested: {
-		test: 'Nested',
+		test: 'Nested fallback',
 		deep: {
-			again: 'Nested again',
+			again: 'Nested again {value:number|number}',
 		},
 	},
-	test2_none: 'Plural none (not in en)',
-	test2_one: undefined, // Key not used
-	test2_other: 'Plural other {count|uppercase}'
+	// Key not used test2_none
+	test2_one: 'Plural one', 
+	test2_other: 'Plural: {count}'
 } as const;
 
 export default en;
