@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-import { getTranslate, type ExtraFormatters, type Formatter, type Locales, type TranslationType } from './index';
+import { getTranslate, type ExtraFormatters, type Locales, type TranslationType } from './index';
 
 export interface TranslationContextType {
 	isLoading: boolean;
@@ -17,11 +17,11 @@ export const initReact = (
 	extraFormatters: ExtraFormatters,
 ) => {
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
+	const initialTranslate = getTranslate(initialTranslation, initialLocale, extraFormatters)
+	
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const [locale, setLocale] = useState<Locales>(initialLocale);
-		const [translate, setTranslate] = useState(() =>
-			getTranslate(initialTranslation, locale, extraFormatters),
-		);
+		const [translate, setTranslate] = useState(() => initialTranslate);
 		const [isLoading, setIsLoading] = useState(true);
 
 		const loadTranslation = async (targetLocale: Locales) => {
@@ -36,7 +36,7 @@ export const initReact = (
 					translationData = translationOrLoader;
 				}
 
-				setTranslate(getTranslate(translationData, targetLocale, extraFormatters));
+				setTranslate(getTranslate(translationData, targetLocale, extraFormatters, initialTranslate));
 			} catch (error) {
 				console.error(`Failed to load translations for locale ${String(targetLocale)}:`, error);
 			} finally {

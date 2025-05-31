@@ -14,6 +14,7 @@ A powerful, type-safe internationalization (i18n) library for TypeScript and Rea
 - 📦 **Zero Dependencies**: Lightweight with minimal runtime overhead
 - 🚀 **Modern**: Built with ESM, supports tree-shaking
 - ✅ **Translation Validation**: Comprehensive compile-time validation for translation keys and formatters
+- 🛡️ **Automatic Fallbacks**: Missing translations automatically fall back to default language
 
 ## 📦 Installation
 
@@ -102,20 +103,32 @@ declare module 'typed-locales' {
 }
 ```
 
-### 4. Basic Usage
+### 4. Basic Usage with Automatic Fallbacks
 
 ```typescript
 import { getTranslate } from 'typed-locales';
 import en from './translations/en';
+import es from './translations/es';
 
-const t = getTranslate(en, 'en', undefined);
+// Create default translator (fallback)
+const defaultTranslate = getTranslate(en, 'en', undefined);
 
-console.log(t('greeting', { name: 'John' })); // "Hello, John!"
-console.log(t('nested.welcome')); // "Welcome to our app"
-console.log(t('items', { count: 0 })); // "No items"
+// Create Spanish translator with English fallback
+const translate = getTranslate(es, 'es', undefined, defaultTranslate);
+
+// Missing translations automatically fall back to English
+console.log(translate('greeting', { name: 'John' })); // "¡Hola, John!"
+console.log(translate('nested.welcome')); // "Bienvenido a nuestra aplicación"
+
+// If a key was missing in Spanish, it would show the English version
 ```
 
-### 5. React Integration
+**How Fallbacks Work:**
+- If a translation key is missing, it automatically uses the default language
+- Perfect for incomplete translations or gradual localization
+- No runtime errors for missing keys
+
+### 5. React Integration with Automatic Fallbacks
 
 ```tsx
 import React from 'react';
@@ -123,7 +136,7 @@ import { initReact } from 'typed-locales';
 import en from './translations/en';
 
 const { TranslationProvider, useTranslation } = initReact(
-  en, // Initial translation
+  en, // Initial translation (also serves as default/fallback)
   'en', // Initial locale
   {
     en,
@@ -158,6 +171,11 @@ function MyComponent() {
   );
 }
 ```
+
+**React Fallback Behavior:**
+- The initial translation (first parameter) automatically serves as the fallback
+- When switching languages, missing keys fall back to the initial language
+- Seamless user experience even with incomplete translations
 
 ## 🎨 Advanced Features
 
@@ -205,6 +223,18 @@ const translations = {
   messages_one: "One message",     // count === 1
   messages_other: "{count} messages" // all other counts
 } as const;
+```
+
+### Multiple Fallback Strategies
+
+```typescript
+// Strategy 1: Single fallback language
+const defaultTranslate = getTranslate(en, 'en', customFormatters);
+const frenchTranslate = getTranslate(fr, 'fr', customFormatters, defaultTranslate);
+
+// Strategy 2: Cascading fallbacks
+const germanTranslate = getTranslate(de, 'de', customFormatters, frenchTranslate);
+// German → French → English fallback chain
 ```
 
 ## 🛡️ Validation System
@@ -269,11 +299,16 @@ monopoly: true
 
 ## 📚 API Reference
 
-### `getTranslate(translations, locale, extraFormatters)`
+### `getTranslate(translations, locale, extraFormatters, defaultTranslate?)`
 Creates a translation function with full type safety.
 
+- `translations`: Your translation object
+- `locale`: Current locale string
+- `extraFormatters`: Custom formatter functions
+- `defaultTranslate`: Optional fallback translator for missing keys
+
 ### `initReact(initialTranslation, initialLocale, allTranslations, extraFormatters)`
-Initializes React integration with context provider and hooks.
+Initializes React integration with context provider and hooks. The `initialTranslation` automatically serves as the fallback.
 
 ### `useTranslation()`
 React hook returning `{ t, locale, setLocale, isLoading }`.

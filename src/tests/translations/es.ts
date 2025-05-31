@@ -3,16 +3,16 @@ import { type EnsureValidTranslation, type TranslationType, type ValidateTransla
 let test: EnsureValidTranslation<ValidateTranslation<typeof es>> = 0;
 void test;
 const es = {
-	test: 'Regular translation',
+	test: 'Traducción regular',
 	nested: {
-		test: 'Nested',
+		test: 'Anidado',
 		deep: {
-			again: 'Nested again',
+			again: 'Anidado nuevamente',
 		},
 	},
-	test2_none: 'Plural none (not in en)',
-	test2_one: undefined, // Key not used
-	test2_other: 'Plural other {count|uppercase}'
+	test2_none: 'Plural ninguno (no está en en)',
+	test2_one: undefined, // Clave no utilizada
+	test2_other: 'Plural otros {count|uppercase}'
 } as const satisfies TranslationType;
 
 export default es;

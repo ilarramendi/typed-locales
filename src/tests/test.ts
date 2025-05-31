@@ -14,7 +14,8 @@ declare module '../../src/index' {
 	}
 }
 
-const translate = getTranslate(es, 'en', customFormatters);
+const defaultTranslate = getTranslate(en, 'en', customFormatters); 
+const translate = getTranslate(es, 'es', customFormatters, defaultTranslate);
 
 const result = {
 	test: translate('test'),
@@ -24,9 +25,9 @@ const result = {
 			again: translate('nested.deep.again'),
 		},
 	},
-	test2_none: translate('test2', {count: 0, value: 'test'}),
-	test2_one: translate('test2', { count: 1, value: 'test' }),
-	test2_other: translate('test2', { count: 69, value: 'test' }),
+	test2_none: translate('test2', {count: 0 }),
+	test2_one: translate('test2', { count: 1 }),
+	test2_other: translate('test2', { count: 69 }),
 }
 
 console.log(result);
