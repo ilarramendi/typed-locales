@@ -77,5 +77,13 @@ export type ValidateTranslation<T> = RemoveNeverDeep<InternalValidateTranslation
 /**
  * Utility type to ensure there is no validation errors
  * 
+ * Example on how to use without any extra eslint/ts errors except for the validations
+ * 
+ * ```
+ * const validations: EnsureValidTranslation<ValidateTranslation<typeof en>> = 0;
+ * void validations;
+ * ```
+ * 
+ * where `en` is your translation with `as const`
  * */ 
-export type EnsureValidTranslation<T extends never> = T | number;
+export type EnsureValidTranslation<T extends never> = T | any;
