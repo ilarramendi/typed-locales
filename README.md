@@ -13,6 +13,7 @@ A powerful, type-safe internationalization (i18n) library for TypeScript and Rea
 - 🔧 **Developer Experience**: VS Code extension support with i18n-ally
 - 📦 **Zero Dependencies**: Lightweight with minimal runtime overhead
 - 🚀 **Modern**: Built with ESM, supports tree-shaking
+- ✅ **Translation Validation**: Comprehensive compile-time validation for translation keys and formatters
 
 ## 📦 Installation
 
@@ -26,13 +27,15 @@ pnpm add typed-locales
 
 ## 🚀 Quick Start
 
-### 1. Define Your Translations
+### 1. Define Your Primary Translation
 
-Create your translation files with TypeScript:
+Create your main translation file (typically English):
 
 ```typescript
 // translations/en.ts
-export const en = {
+import type { EnsureValidTranslation, ValidateTranslation } from 'typed-locales';
+
+const en = {
   greeting: "Hello, {name}!",
   nested: {
     welcome: "Welcome to our app",
@@ -43,26 +46,53 @@ export const en = {
   items_other: "{count} items"
 } as const;
 
+// Validation catches bracket/formatter errors
+let validation: EnsureValidTranslation<ValidateTranslation<typeof en>> = 0;
+void validation;
+
+export default en;
+```
+
+### 2. Define Secondary Translations with `satisfies TranslationType`
+
+For other languages, use `satisfies TranslationType` to ensure all keys are present:
+
+```typescript
 // translations/es.ts  
-export const es = {
+import type { 
+  EnsureValidTranslation, 
+  ValidateTranslation, 
+  TranslationType 
+} from 'typed-locales';
+
+const es = {
   greeting: "¡Hola, {name}!",
   nested: {
     welcome: "Bienvenido a nuestra aplicación",
     farewell: "¡Adiós, {name}!"
   },
   items_none: "Sin elementos",
-  items_one: "Un elemento", 
+  items_one: undefined, // Only plural keys can be undefined (unused in this language)
   items_other: "{count} elementos"
-} as const;
+} as const satisfies TranslationType; // ← Ensures all keys from primary translation are handled
+
+let validation: EnsureValidTranslation<ValidateTranslation<typeof es>> = 0;
+void validation;
+
+export default es;
 ```
 
-### 2. Configure Type Overrides
+**What `satisfies TranslationType` does:**
+- Ensures your translation matches the primary translation structure
+- Catches missing keys (TypeScript will error)
+- Allows `undefined` for plural keys not used in specific languages (like `items_one`, `items_none`)
+- Prevents typos in translation keys
 
-Extend the library types to match your translations:
+### 3. Configure Type Overrides
 
 ```typescript
 // types/i18n.ts
-import { en } from '../translations/en';
+import en from '../translations/en';
 
 declare module 'typed-locales' {
   interface Overrides {
@@ -72,53 +102,36 @@ declare module 'typed-locales' {
 }
 ```
 
-### 3. Basic Usage
+### 4. Basic Usage
 
 ```typescript
 import { getTranslate } from 'typed-locales';
-import { en, es } from './translations';
+import en from './translations/en';
 
 const t = getTranslate(en, 'en', undefined);
 
-// Simple translation
 console.log(t('greeting', { name: 'John' })); // "Hello, John!"
-
-// Nested keys
 console.log(t('nested.welcome')); // "Welcome to our app"
-
-// Pluralization
 console.log(t('items', { count: 0 })); // "No items"
-console.log(t('items', { count: 1 })); // "One item" 
-console.log(t('items', { count: 5 })); // "5 items"
-
-
-// TypeScript error examples
-console.log(t('fakeKey')); 
-// Argument of type "fakeKey" is not assignable to parameter of type PossibleTranslationKeys 
-
-console.log(t('items', { test: 5 }));
-// Object literal may only specify known properties, and test does not exist in type { count: number }
 ```
 
-### 4. React Integration
+### 5. React Integration
 
 ```tsx
 import React from 'react';
 import { initReact } from 'typed-locales';
-import { en, es } from './translations';
+import en from './translations/en';
 
-// Initialize React integration
 const { TranslationProvider, useTranslation } = initReact(
   en, // Initial translation
   'en', // Initial locale
   {
     en,
-    es: () => import('./translations/es').then(m => m.es) // Lazy load
+    es: () => import('./translations/es').then(m => m.default) // Lazy load
   },
   {} // Extra formatters
 );
 
-// App component
 function App() {
   return (
     <TranslationProvider>
@@ -127,7 +140,6 @@ function App() {
   );
 }
 
-// Component using translations
 function MyComponent() {
   const { t, locale, setLocale, isLoading } = useTranslation();
   
@@ -151,23 +163,15 @@ function MyComponent() {
 
 ### Custom Formatters
 
-Create custom formatters for specialized text transformations:
-
 ```typescript
 const customFormatters = {
   currency: (value: string, locale: string) => 
-    new Intl.NumberFormat(locale, { 
-      style: 'currency', 
-      currency: 'USD' 
-    }).format(Number(value)),
-  
+    new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(Number(value)),
   highlight: (value: string) => `**${value}**`,
-  
-  truncate: (value: string) => 
-    value.length > 50 ? value.slice(0, 47) + '...' : value
+  truncate: (value: string) => value.length > 50 ? value.slice(0, 47) + '...' : value
 } as const;
 
-// Update your type declaration
+// Update type declaration
 declare module 'typed-locales' {
   interface Overrides {
     shape: typeof en;
@@ -179,170 +183,61 @@ declare module 'typed-locales' {
 // Use in translations
 const translations = {
   price: "Price: {amount|currency}",
-  title: "{text|highlight|truncate}",
-  username: "{name|lowercase}"
+  title: "{text|highlight|truncate}"
 } as const;
-
-const t = getTranslate(translations, 'en', customFormatters);
-console.log(t('price', { amount: '99.99' })); // "Price: $99.99"
 ```
 
 ### Built-in Formatters
 
-The library includes several built-in formatters:
-
-- `lowercase`: Convert to lowercase
-- `uppercase`: Convert to uppercase  
-- `capitalize`: Capitalize first letter
+- `lowercase`, `uppercase`, `capitalize`: Text case transformations
 - `void`: Remove the value (empty string)
 - `weekday`: Format date as weekday name
 - `number`: Format as localized number
 - `json`: Convert to JSON string
 
-### Pluralization Rules
+### Pluralization
 
-The library supports three plural forms following common i18n patterns:
-
-- `_none`: Used when count is 0
-- `_one`: Used when count is 1  
-- `_other`: Used for all other counts (if the value 1 or 0 and that translation is not defuned this will be used too)
+Three plural forms following common i18n patterns:
 
 ```typescript
 const translations = {
-  // All three forms
-  messages_none: "No messages",
-  messages_one: "One message", 
-  messages_other: "{count} messages",
+  messages_none: "No messages",    // count === 0
+  messages_one: "One message",     // count === 1
+  messages_other: "{count} messages" // all other counts
 } as const;
 ```
 
-### Validation System
+## 🛡️ Validation System
 
-The library includes a powerful compile-time validation system that catches translation errors before runtime. This validation ensures your translations are correctly formatted and use valid formatters.
+The library provides compile-time validation to catch errors before runtime:
 
-#### Setting Up Validation
-
-Add validation to your translation files using the validation utilities:
-
-```typescript
-// translations/en.ts
-import type { EnsureValidTranslation, ValidateTranslation } from 'typed-locales';
-
-const en = {
-  greeting: "Hello, {name}!",
-  price: "Cost: {amount|currency}",
-  items_one: "One item", 
-  items_other: "{count} items",
-  invalidExample: "Hello {name" // This will be caught!
-} as const;
-
-// Add this validation line - it will show TypeScript errors for any issues
-let validation: EnsureValidTranslation<ValidateTranslation<typeof en>> = 0;
-void validation; // Prevents unused variable warnings
-
-export default en;
-```
-
-#### What Gets Validated
-
-The validation system checks for several types of errors:
-
-**1. Bracket Balance**
 ```typescript
 const translations = {
-  valid: "Hello {name}",
-  missingClose: "Hello {name",     // ❌ Error: Missing closing brace
-  missingOpen: "Hello name}",      // ❌ Error: Missing opening brace
+  valid: "Hello {name|capitalize}",
+  missingBrace: "Hello {name",           // ❌ Brackets not balanced
+  invalidFormatter: "Hello {name|fake}", // ❌ Invalid formatter
 } as const;
 
-// TypeScript will show: `Brackets are not balanced in: "Hello {name"`
-```
-
-**2. Invalid Formatters**
-```typescript
-const translations = {
-  invalidFormatter: "Hello {name|badFormatter}",
-  // TypeScript will show: `You are using an invalid formatter: badFormatter in: "Hello {name|badFormatter}"`
-} as const;
-
-```
-
-**3. Complex Validation Example**
-
-```typescript
-// This example shows various validation scenarios
-const complexTranslations = {
-  // ✅ Valid cases
-  simple: "Hello world",
-  withParam: "Hello {name}",
-  withFormatter: "Hello {name|capitalize}",
-  multipleFormatters: "Price: {amount|number|currency}",
-  plural_one: "One item",
-  plural_other: "{count} items",
-  
-  // ❌ Invalid cases that will be caught
-  unmatchedBrace1: "Hello {name",
-  unmatchedBrace2: "Hello name}",
-  invalidFormatter: "Hello {name|badFormatter}",
-  emptyBraces: "Hello {}",
-  // Missing translations
-} as const;
-
-// The validation will only show errors for the invalid cases
-let validation: EnsureValidTranslation<ValidateTranslation<typeof complexTranslations>> = 0;
+// This line will show TypeScript errors for any issues:
+let validation: EnsureValidTranslation<ValidateTranslation<typeof translations>> = 0;
 void validation;
 ```
 
-#### The Validation Trick Explained
+**What gets validated:**
+- Bracket balance in placeholders
+- Formatter names against available formatters
+- Missing translation keys (via `satisfies TranslationType`)
 
-```typescript
-// This line serves multiple purposes:
-let validation: EnsureValidTranslation<ValidateTranslation<typeof en>> = 0;
-void validation;
-```
-
-**Why this pattern works:**
-1. **Type-only validation**: No runtime overhead, pure compile-time checking
-2. **Silent when valid**: If translations are valid, TypeScript sees `never` and allows the assignment
-3. **Loud when invalid**: If translations have errors, TypeScript shows detailed error messages
-4. **No lint issues**: The `void validation;` prevents "unused variable" warnings
-5. **Zero runtime cost**: The validation code is purely for TypeScript and gets compiled away
-
-**TypeScript Error Output:**
-```
-Type '{ broken: "You are using an invalid formatter: unknownFormatter in: \"Hello {name|unknownFormatter}\""; }' 
-is not assignable to type 'never'.
-```
-
-If using its recommended to install `Pretty Typescript Errors` from `yoavbls`, this extension greatly improves how all TS errors are shown in vscode hover on error
-
-#### Key Benefits of This Approach
-
-The validation system provides several advantages over traditional i18n solutions:
-
-**⚡ Instant Type Safety**
-- No code generation or build processes required
-- Type safety works immediately when you save your translation files
-- No need to run watchers or background processes during development
-- Pure TypeScript type inference - works with any TypeScript setup
-
-**🔍 Comprehensive Error Detection**
-- Catches syntax errors before they reach production
-- Validates formatter names against your actual formatter implementations
-- Ensures bracket balance and proper placeholder syntax
-- Shows exact error locations with helpful messages
-
-**🚀 Zero Runtime Overhead**
-- All validation happens at compile time
-- No runtime performance impact
-- Validation code is completely removed in production builds
-- Works with any bundler or TypeScript compiler
+**The validation pattern:**
+- Zero runtime cost - pure TypeScript validation
+- Silent when valid, descriptive errors when invalid
+- Works instantly without build processes
 
 ## 🔧 Configuration
 
 ### VS Code Integration
 
-For the best development experience, install the i18n-ally VS Code extension and use the provided configuration:
+Install i18n-ally extension with this config:
 
 ```yaml
 # .vscode/i18n-ally-custom-framework.yml
@@ -360,8 +255,6 @@ monopoly: true
 
 ### TypeScript Configuration
 
-Ensure your `tsconfig.json` includes proper configuration:
-
 ```json
 {
   "compilerOptions": {
@@ -377,125 +270,67 @@ Ensure your `tsconfig.json` includes proper configuration:
 ## 📚 API Reference
 
 ### `getTranslate(translations, locale, extraFormatters)`
-
-Creates a translation function.
-
-**Parameters:**
-- `translations`: Translation object with type safety
-- `locale`: Current locale string
-- `extraFormatters`: Object with custom formatter functions
-
-**Returns:** Translation function `t(key, params?)`
+Creates a translation function with full type safety.
 
 ### `initReact(initialTranslation, initialLocale, allTranslations, extraFormatters)`
-
-Initializes React integration.
-
-**Parameters:**
-- `initialTranslation`: Initial translation object (must be loaded)
-- `initialLocale`: Starting locale
-- `allTranslations`: Record of all available translations (can be lazy-loaded)
-- `extraFormatters`: Custom formatters object
-
-**Returns:** `{ TranslationProvider, useTranslation }`
+Initializes React integration with context provider and hooks.
 
 ### `useTranslation()`
-
-React hook for accessing translations (must be used within TranslationProvider).
-
-**Returns:**
-```typescript
-{
-  t: TranslationFunction;
-  locale: string;
-  setLocale: (locale: string) => Promise<void>;
-  isLoading: boolean;
-}
-```
+React hook returning `{ t, locale, setLocale, isLoading }`.
 
 ## 🛠️ Development Patterns
 
-### Lazy Loading Translations
-
-For better performance, lazy load translation files:
-
+### Lazy Loading
 ```typescript
 const translations = {
-  en: englishTranslations, // Always loaded
+  en: englishTranslations,
   es: () => import('./translations/es').then(m => m.default),
-  fr: () => import('./translations/fr').then(m => m.default),
-  de: () => import('./translations/de').then(m => m.default)
+  fr: () => import('./translations/fr').then(m => m.default)
 };
 ```
 
-### Organizing Large Translation Files
-
-Split large translation files into modules:
-
+### Organizing Large Files
 ```typescript
-// translations/en/common.ts
-export const common = {
-  buttons: {
-    save: "Save",
-    cancel: "Cancel",
-    delete: "Delete"
-  }
-} as const;
-
-// translations/en/pages.ts  
-export const pages = {
-  home: {
-    title: "Welcome Home",
-    subtitle: "Get started with our app"
-  }
-} as const;
-
-// translations/en/index.ts
+// Split into modules
 export const en = {
   ...common,
-  ...pages
+  ...pages,
+  ...forms
 } as const;
-```
-
-### Type-Safe Translation Keys
-
-Extract translation keys for reuse:
-
-```typescript
-import type { PossibleTranslationKeys } from 'typed-locales';
-
-// Get all possible keys as a union type
-type TranslationKey = PossibleTranslationKeys;
-
-// Use in functions
-function logTranslation(key: TranslationKey) {
-  console.log(t(key));
-}
 ```
 
 ## 🚨 Common Pitfalls
 
 ### Missing `as const`
-
-Always use `as const` on translation objects for proper type inference:
-
 ```typescript
 // ❌ Wrong - loses type information
-const translations = {
-  hello: "Hello"
-};
+const translations = { hello: "Hello" };
 
 // ✅ Correct - preserves literal types  
-const translations = {
-  hello: "Hello"  
-} as const;
+const translations = { hello: "Hello" } as const;
 ```
 
-**Note**: The TypeScript compiler will catch most other common issues automatically, including:
-- Missing translation keys across different languages
-- Incorrect parameter names or missing required parameters (like `count` for plurals)
-- Invalid translation key references
-- Missing parameters for placeholders
+### Forgetting `satisfies TranslationType` for Secondary Translations
+```typescript
+// ❌ Wrong - no validation against primary shape
+const es = { greeting: "¡Hola!" } as const;
+
+// ✅ Correct - validates structure and catches missing keys
+const es = { greeting: "¡Hola!" } as const satisfies TranslationType;
+```
+
+### Not Adding Validation
+```typescript
+// ❌ Missing validation
+const translations = { broken: "Hello {name" } as const;
+
+// ✅ With validation - catches syntax errors
+const translations = { broken: "Hello {name" } as const;
+let validation: EnsureValidTranslation<ValidateTranslation<typeof translations>> = 0;
+void validation; // TypeScript error: Brackets not balanced
+```
+
+**Pro Tip**: Install "Pretty TypeScript Errors" VS Code extension for clearer error messages.
 
 ## 🤝 Contributing
 
@@ -504,12 +339,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📄 License
 
 ISC License - see LICENSE file for details.
-
-## 🔗 Related Projects
-
-- [i18next](https://www.i18next.com/) - Mature i18n framework
-- [react-i18next](https://react.i18next.com/) - React bindings for i18next
-- [i18n-ally](https://github.com/lokalise/i18n-ally) - VS Code extension for i18n
 
 ---
 
