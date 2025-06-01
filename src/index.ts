@@ -1,5 +1,5 @@
-import baseFormatters from "./formatters";
-import formatters, { type Formatter } from "./formatters";
+import baseFormatters from "./formatters.js";
+import formatters, { type Formatter } from "./formatters.js";
 
 // Possible value types passed as parameters
 export type ValueType = null | number | string | undefined | object;
@@ -268,11 +268,11 @@ export const getTranslate = (
 	return translate;
 };
 
-export { initReact } from "./react";
+export { initReact } from "./react.js";
 
-export { type Formatter, default as defaultFormatters } from "./formatters";
+export { type Formatter, default as defaultFormatters } from "./formatters.js";
 
 export {
 	type ValidateTranslation,
 	type EnsureValidTranslation,
-} from "./validation";
+} from "./validation.js";

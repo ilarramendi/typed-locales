@@ -4,9 +4,11 @@
 		"module": "ESNext",
 		"declaration": true,
 		"outDir": "dist",
-		"moduleResolution": "Node",
+		"moduleResolution": "bundler",
 		"esModuleInterop": true,
 		"strict": true,
+		"allowImportingTsExtensions": false,
+		"noEmit": false,
 		"skipLibCheck": true,
 		"declarationMap": true,
 		"jsx": "react-jsx"

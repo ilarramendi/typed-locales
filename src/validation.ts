@@ -1,4 +1,4 @@
-import type { FormatterTypes, TypeMap } from "./index";
+import type { FormatterTypes, TypeMap } from "./index.js";
 
 type ErrorMessage<Value extends string, T extends string> = `You are using an invalid formatter: ${T} in: "${Value}"`;
 type InvalidTypeError<Value extends string, T extends string> = `You are using an invalid type: ${T} in: "${Value}"`;

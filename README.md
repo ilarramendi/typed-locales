@@ -63,7 +63,7 @@ const es = {
   items_none: "Sin elementos",
   items_one: undefined, // Unused plural form
   items_other: "{count} elementos"
-} as const satisfies TranslationType;
+} as const satisfies TranslationType; // Ensures same shape as EN
 
 export default es;
 ```

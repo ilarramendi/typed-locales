@@ -1,4 +1,4 @@
-import type { ValueType } from ".";
+import type { ValueType } from "./index.js";
 
 export type Formatter = (value: ValueType, locale: string) => string;
 

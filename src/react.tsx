@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-import { getTranslate, type ExtraFormatters, type Locales, type TranslationType } from './index';
+import { getTranslate, type ExtraFormatters, type Locales, type TranslationType } from './index.js';
 
 export interface TranslationContextType {
 	isLoading: boolean;
@@ -22,7 +22,7 @@ export const initReact = (
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const [locale, setLocale] = useState<Locales>(initialLocale);
 		const [translate, setTranslate] = useState(() => initialTranslate);
-		const [isLoading, setIsLoading] = useState(true);
+		const [isLoading, setIsLoading] = useState(false);
 
 		const loadTranslation = async (targetLocale: Locales) => {
 			try {
