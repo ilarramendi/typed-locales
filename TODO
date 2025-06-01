@@ -12,3 +12,5 @@
   - required: "{param:number}"
 Make formatters input type safe in the string (catch {test:date|uppercase})
 Add a incrementalTranslaiton type that is like translation type but all values can be undefined
+Allow passing custom types to validate in string
+Allow accessing object properties from values

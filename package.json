@@ -1,6 +1,6 @@
 {
   "name": "typed-locales",
-  "version": "1.0.34",
+  "version": "1.0.37",
   "description": "Type safe utilities for translating strings",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,6 +22,14 @@
     "typescript": "^5.8.3"
   },
   "devDependencies": {
-    "@types/react": "^19.1.5"
+    "@eslint/js": "^9.28.0",
+    "@eslint/markdown": "^6.4.0",
+    "@types/react": "^19.1.5",
+    "eslint": "^9.28.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.4.1",
+    "globals": "^16.2.0",
+    "prettier": "^3.5.3",
+    "typescript-eslint": "^8.33.0"
   }
 }

@@ -1,6 +1,10 @@
-import type { EnsureValidTranslation, TranslationType, ValidateTranslation } from '../../index';
+import type {
+	EnsureValidTranslation,
+	TranslationType,
+	ValidateTranslation,
+} from '../../index';
 
-let test: EnsureValidTranslation<ValidateTranslation<typeof en>> = 0;
+const test: EnsureValidTranslation<ValidateTranslation<typeof en>> = 0;
 void test;
 const en = {
 	test: 'Hello {who:string|capitalize}!',
@@ -10,9 +14,9 @@ const en = {
 		},
 	},
 	// Key not used test2_none
-	test2_one: 'Plural one', 
+	test2_one: 'Plural one',
 	test2_other: 'Plural: {count}',
-	customFormatter: 'Test formatter {data|customFormatter}'
+	customFormatter: 'Test formatter {data|customFormatter}',
 } as const;
 
 export default en;

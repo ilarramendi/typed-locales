@@ -5,7 +5,7 @@ import { getTranslate, type ExtraFormatters, type Locales, type TranslationType 
 export interface TranslationContextType {
 	isLoading: boolean;
 	locale: Locales;
-	setLocale: (locale: Locales) => void;
+	setLocale: (locale: Locales) => Promise<Locales>;
 	t: ReturnType<typeof getTranslate>;
 }
 
@@ -13,16 +13,22 @@ export interface TranslationContextType {
 export const initReact = (
 	initialTranslation: TranslationType,
 	initialLocale: Locales,
-	allTranslations: Record<Locales, TranslationType | (() => Promise<TranslationType>)>,
+	allTranslations: Record<Locales, (() => Promise<TranslationType>) | TranslationType>,
 	extraFormatters: ExtraFormatters,
 ) => {
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
-	const initialTranslate = getTranslate(initialTranslation, initialLocale, extraFormatters)
-	
+	const initialTranslate = getTranslate(initialTranslation, initialLocale, extraFormatters);
+
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
-		const [locale, setLocale] = useState<Locales>(initialLocale);
-		const [translate, setTranslate] = useState(() => initialTranslate);
-		const [isLoading, setIsLoading] = useState(false);
+		const [state, setState] = useState<{
+			isLoading: boolean;
+			locale: Locales;
+			translate: typeof initialTranslate;
+		}>({
+			isLoading: false,
+			locale: initialLocale,
+			translate: initialTranslate,
+		});
 
 		const loadTranslation = async (targetLocale: Locales) => {
 			try {
@@ -30,32 +36,41 @@ export const initReact = (
 				let translationData: TranslationType;
 
 				if (typeof translationOrLoader === 'function') {
-					setIsLoading(true);
+					setState(previous => ({ ...previous, isLoading: true }));
 					translationData = await translationOrLoader();
 				} else {
 					translationData = translationOrLoader;
 				}
 
-				setTranslate(getTranslate(translationData, targetLocale, extraFormatters, initialTranslate));
+				setState({
+					isLoading: false,
+					locale: targetLocale,
+					translate: getTranslate(
+						translationData,
+						targetLocale,
+						extraFormatters,
+						initialLocale === targetLocale ? undefined : initialTranslate,
+					),
+				});
 			} catch (error) {
 				console.error(`Failed to load translations for locale ${String(targetLocale)}:`, error);
-			} finally {
-				setIsLoading(false);
+				setState(previous => ({ ...previous, isLoading: false }));
 			}
 		};
 
 		return (
 			<TranslationContext.Provider
 				value={{
-					isLoading,
-					locale,
+					isLoading: state.isLoading,
+					locale: state.locale,
 					setLocale: async newLocale => {
-						if (newLocale !== locale) {
-							setLocale(newLocale);
+						if (newLocale !== state.locale) {
 							await loadTranslation(newLocale);
 						}
+
+						return newLocale;
 					},
-					t: translate,
+					t: state.translate,
 				}}
 			>
 				{children}
@@ -70,10 +85,9 @@ export const initReact = (
 		return context;
 	};
 
-
 	return {
 		TranslationProvider,
-		useTranslation
+		useTranslation,
 	};
 };
 
