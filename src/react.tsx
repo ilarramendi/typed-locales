@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 
 import { getTranslate, type ExtraFormatters, type Locales, type TranslationType } from './index.js';
 
@@ -30,7 +30,7 @@ export const initReact = (
 			translate: initialTranslate,
 		});
 
-		const loadTranslation = async (targetLocale: Locales) => {
+		const setLocale = useCallback(async (targetLocale: Locales) => {
 			try {
 				const translationOrLoader = allTranslations[targetLocale];
 				let translationData: TranslationType;
@@ -56,20 +56,16 @@ export const initReact = (
 				console.error(`Failed to load translations for locale ${String(targetLocale)}:`, error);
 				setState(previous => ({ ...previous, isLoading: false }));
 			}
-		};
+
+			return targetLocale;
+		}, []);
 
 		return (
 			<TranslationContext.Provider
 				value={{
 					isLoading: state.isLoading,
 					locale: state.locale,
-					setLocale: async newLocale => {
-						if (newLocale !== state.locale) {
-							await loadTranslation(newLocale);
-						}
-
-						return newLocale;
-					},
+					setLocale,
 					t: state.translate,
 				}}
 			>
