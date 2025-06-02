@@ -105,6 +105,7 @@ translate('items', { count: 5 }); // "5 elementos"
 - [Formatters Guide](./docs/formatters.md) - Built-in and custom formatters
 - [Validation System](./docs/validation.md) - Compile-time validation features
 - [VS Code Setup](./docs/vscode-setup.md) - IDE integration guide
+- [Helper Types](./docs/vscode-setup.md) - Helper types for advanced use
 
 ## 🛠️ TypeScript Configuration
 

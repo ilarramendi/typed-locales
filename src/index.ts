@@ -32,6 +32,23 @@ export type PossibleTranslationKeys = DotNestedLeafKeys<Translations>;
 export type ExtraFormatters = Overrides['extraFormatters'];
 export type FormatterTypes = keyof ExtraFormatters | keyof typeof formatters;
 export type TranslateFunctionType = ReturnType<typeof getTranslate>;
+type TranslatedMark = { translated: true };
+/** Ensure a string is translated */
+export type TranslatedString = string & TranslatedMark;
+
+// Interpolation properties based on key type with type inference
+export type InterpolationProperties<
+	S extends string,
+	IsKeyPlural = IsPlural<S>,
+> = DeepResolve<
+	IsKeyPlural extends true
+		? { count: number } & PlaceholderInfoToObject<
+				Exclude<ExtractPlaceholdersWithTypes<S>, { name: 'count'; type: any }>
+			>
+		: ExtractPlaceholders<S> extends never
+			? {}
+			: PlaceholderInfoToObject<ExtractPlaceholdersWithTypes<S>>
+>;
 
 // TODO add more
 const pluralSufixes = ['_none', '_one', '_other'] as const;
@@ -140,20 +157,6 @@ type GetValue<Path extends string> = Exclude<
 	undefined
 >;
 
-// Interpolation properties based on key type with type inference
-type InterpolationProperties<
-	S extends string,
-	IsKeyPlural = IsPlural<S>,
-> = DeepResolve<
-	IsKeyPlural extends true
-		? { count: number } & PlaceholderInfoToObject<
-				Exclude<ExtractPlaceholdersWithTypes<S>, { name: 'count'; type: any }>
-			>
-		: ExtractPlaceholders<S> extends never
-			? {}
-			: PlaceholderInfoToObject<ExtractPlaceholdersWithTypes<S>>
->;
-
 export type DeepResolve<T> = T extends (...args: any[]) => any
 	? T
 	: T extends object
@@ -179,8 +182,8 @@ export const getTranslate = (
 			: Key extends PossibleTranslationKeys
 				? [params: InterpolationProperties<GetValue<Key>>]
 				: []
-	): GetValue<Key> {
-		type Value = GetValue<Key>;
+	): GetValue<Key> & TranslatedMark {
+		type Value = GetValue<Key> & TranslatedMark;
 
 		const parts = key.split('.');
 		const parameters = arguments_[0] as Record<string, ValueType>;
