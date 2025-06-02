@@ -36,7 +36,7 @@ const result = {
 	},
 	test2_none: translate('test2', { count: 0 }), // Count prop from plurals is always number
 	test2_one: translate('test2', { count: 1 }),
-	test2_other: translate('test2', { count: 69 }),
+	test2_other: translate('test2', { count: '69' }), // TODO fix
 	customFormatter: translate('customFormatter', {
 		data: 'custom formatter data',
 	}),

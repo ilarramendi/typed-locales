@@ -165,7 +165,7 @@ export const getTranslate = (
 	translations: TranslationType,
 	locale: Locales,
 	extraFormatters: ExtraFormatters,
-	baseTranslate?: <Key extends PossibleTranslationKeys>(...props: any) => string
+	baseTranslate?: (...props: any) => string
 ) => {
 	const formatters = { ...baseFormatters, ...extraFormatters };
 
@@ -243,11 +243,11 @@ export const getTranslate = (
 		if (parameters) {
 			for (const [parameter, value_] of Object.entries(parameters)) {
 				value = value.replaceAll(
-					new RegExp(`{${parameter}(:\w+)?(\\|[\w|]+)?}`, 'g'),
+					new RegExp(`{${parameter}(:\\w+)?(\\|[\\w|]+)?}`, 'g'),
 					(match, _type, formatters_) => {
 						const parsedFormatters = (formatters_?.split('|').filter(Boolean) ??
 							[]) as FormatterTypes[];
-						let formattedValue = String(value_);
+						let formattedValue = value_;
 						for (const formatter of parsedFormatters) {
 							if (!formatters[formatter]) {
 								console.error(
@@ -261,7 +261,7 @@ export const getTranslate = (
 								locale
 							);
 						}
-						return formattedValue;
+						return String(formattedValue);
 					}
 				);
 			}

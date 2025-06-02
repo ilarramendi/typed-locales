@@ -13,7 +13,7 @@ export interface TranslationContextType {
 export const initReact = (
 	initialTranslation: TranslationType,
 	initialLocale: Locales,
-	allTranslations: Record<Locales, (() => Promise<TranslationType>) | TranslationType>,
+	allTranslations: Record<Locales, (() => Promise<{default: TranslationType}>) | TranslationType>,
 	extraFormatters: ExtraFormatters,
 ) => {
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
@@ -37,7 +37,7 @@ export const initReact = (
 
 				if (typeof translationOrLoader === 'function') {
 					setState(previous => ({ ...previous, isLoading: true }));
-					translationData = await translationOrLoader();
+					translationData = await translationOrLoader().then(t => t.default);
 				} else {
 					translationData = translationOrLoader;
 				}

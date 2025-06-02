@@ -1,6 +1,6 @@
 import type { ValueType } from './index.js';
 
-export type Formatter = (value: ValueType, locale: string) => string;
+export type Formatter = (value: ValueType, locale: string) => ValueType;
 
 const formatters = {
 	lowercase: value => value?.toString().toLowerCase() ?? '',
