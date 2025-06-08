@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import baseFormatters from './formatters.js';
 import formatters, { type Formatter } from './formatters.js';
 
@@ -22,35 +23,49 @@ export interface DefaultOverrides {
 	locales: string;
 	validateFormatters: true;
 }
+
 export interface Overrides extends DefaultOverrides {}
 export type Translations = Overrides['shape'];
+
+/** Shape of the translation, used to ensure translations match */
 export type TranslationType = DeepResolve<
 	GenerateTranslationType<Translations>
 >;
+
 export type Locales = Overrides['locales'];
-export type PossibleTranslationKeys = DotNestedLeafKeys<Translations>;
+/** All possible translation keys */
+export type PossibleTranslationKeys = DotNestedStringKeys<Translations>;
+/** All existing namespaces */
+export type NameSpaces = DotNestedObjectKeys<Translations>;
 export type ExtraFormatters = Overrides['extraFormatters'];
+/** Base formatters + Custom formatters */
 export type FormatterTypes = keyof ExtraFormatters | keyof typeof formatters;
 export type TranslateFunctionType = ReturnType<typeof getTranslate>;
+
+/** Get all possible translations for a given namespace */
+export type NamespaceKeys<Namespace extends NameSpaces> = FilterByPrefix<
+	PossibleTranslationKeys,
+	Namespace
+>;
 type TranslatedMark = { translated: true };
+
 /** Ensure a string is translated */
 export type TranslatedString = string & TranslatedMark;
 
-// Interpolation properties based on key type with type inference
 export type InterpolationProperties<
-	S extends string,
-	IsKeyPlural = IsPlural<S>,
+	Key extends PossibleTranslationKeys,
+	Value extends string = GetValue<Key>,
 > = DeepResolve<
-	IsKeyPlural extends true
-		? { count: number } & PlaceholderInfoToObject<
-				Exclude<ExtractPlaceholdersWithTypes<S>, { name: 'count'; type: any }>
-			>
-		: ExtractPlaceholders<S> extends never
-			? {}
-			: PlaceholderInfoToObject<ExtractPlaceholdersWithTypes<S>>
+	IsPlural<Key> extends true
+		? { count: number } & Omit<ExtractParams<Value>, 'count'>
+		: ExtractParams<Value>
 >;
 
-// TODO add more
+type ExtractParams<Value extends string> =
+	Value extends `${infer _}{${infer _}}${infer _}`
+		? PlaceholderInfoToObject<ExtractPlaceholders<Value>>
+		: {};
+
 const pluralSufixes = ['_none', '_one', '_other'] as const;
 type PluralSuffix = (typeof pluralSufixes)[number];
 
@@ -58,55 +73,79 @@ type BaseTranslationType = {
 	[K: string]: string | BaseTranslationType;
 };
 
-// Remove plural suffix from a key
-type RemovePluralSuffix<T extends string> =
-	T extends `${infer Base}${PluralSuffix}` ? Base : T;
+type FilterByPrefix<
+	T,
+	Prefix extends string,
+> = T extends `${Prefix}.${infer Rest}` ? Rest : never;
+
+type RemovePluralSuffix<T extends string> = T extends `${infer Base}_none`
+	? Base
+	: T extends `${infer Base}_one`
+		? Base
+		: T extends `${infer Base}_other`
+			? Base
+			: T;
 
 // Get all plural keys for a base key
 type PluralKeys<Base extends string> = `${Base}${PluralSuffix}`;
 
-type DotNestedLeafKeys<T> = {
-	[K in keyof T]: K extends string
-		? T[K] extends Record<string, any>
-			? `${K}.${DotNestedLeafKeys<T[K]>}`
-			: RemovePluralSuffix<K>
-		: never;
-}[keyof T];
+type DotNestedStringKeys<T, Prefix extends string = ''> = T extends object
+	? {
+			[K in keyof T]: K extends string
+				? T[K] extends Record<string, any>
+					? DotNestedStringKeys<T[K], `${Prefix}${K}.`>
+					: `${Prefix}${RemovePluralSuffix<K>}`
+				: never;
+		}[keyof T]
+	: never;
+
+type DotNestedObjectKeys<T, Prefix extends string = ''> = T extends object
+	? {
+			[K in keyof T]: K extends string
+				? T[K] extends Record<string, any>
+					? `${Prefix}${K}` | DotNestedObjectKeys<T[K], `${Prefix}${K}.`>
+					: never
+				: never;
+		}[keyof T]
+	: never;
 
 export type GenerateTranslationType<T> = {
-	[K in keyof T as IsPlural<RemovePluralSuffix<K & string>> extends true
+	[K in keyof T as IsPlural<
+		RemovePluralSuffix<K & string> & PossibleTranslationKeys
+	> extends true
 		? never
 		: K]: T[K] extends object ? GenerateTranslationType<T[K]> : string;
 } & {
-	[K in keyof T as IsPlural<RemovePluralSuffix<K & string>> extends true
+	[K in keyof T as IsPlural<
+		RemovePluralSuffix<K & string> & PossibleTranslationKeys
+	> extends true
 		? K | PluralKeys<RemovePluralSuffix<K & string>>
 		: never]?: T[K] extends object ? GenerateTranslationType<T[K]> : string;
 };
 
-// Extract placeholder info including name and type
-type ExtractPlaceholderInfo<T extends string> =
-	T extends `${infer Name}:${infer Type}|${infer _Rest}`
-		? Type extends keyof TypeMap
-			? { name: Name; type: TypeMap[Type] }
-			: { name: Name; type: ValueType }
-		: T extends `${infer Name}:${infer Type}`
-			? Type extends keyof TypeMap
-				? { name: Name; type: TypeMap[Type] }
-				: { name: Name; type: ValueType }
-			: T extends `${infer Name}|${infer _Rest}`
-				? { name: Name; type: ValueType }
-				: { name: T; type: ValueType };
-
-// Extract all placeholders with their types from a string
-type ExtractPlaceholdersWithTypes<
+type ExtractPlaceholders<
 	T extends string,
 	Acc = never,
-> = T extends `${infer _Start}{${infer Placeholder}}${infer Rest}`
-	? ExtractPlaceholdersWithTypes<
-			Rest,
-			Acc | ExtractPlaceholderInfo<Placeholder>
-		>
+> = T extends `${infer Start}{${infer P}}${infer Rest}`
+	? Start extends `${infer _}{${infer _}`
+		? Acc // Nested braces, skip
+		: ExtractPlaceholders<Rest, Acc | ParsePlaceholder<P>>
 	: Acc;
+
+type ParsePlaceholder<P extends string> =
+	P extends `${infer Name}:${infer Type}|${infer _}`
+		? {
+				name: Name;
+				type: Type extends keyof TypeMap ? TypeMap[Type] : ValueType;
+			}
+		: P extends `${infer Name}:${infer Type}`
+			? {
+					name: Name;
+					type: Type extends keyof TypeMap ? TypeMap[Type] : ValueType;
+				}
+			: P extends `${infer Name}|${infer _}`
+				? { name: Name; type: ValueType }
+				: { name: P; type: ValueType };
 
 // Convert placeholder info union to object type
 type PlaceholderInfoToObject<T> = {
@@ -114,18 +153,6 @@ type PlaceholderInfoToObject<T> = {
 		? N
 		: never]: T extends { name: K; type: infer Type } ? Type : never;
 };
-
-// Extract placeholders from a string (for backward compatibility)
-type ExtractPlaceholders<T extends string> =
-	T extends `${infer _Start}{${infer Placeholder}}${infer Rest}`
-		?
-				| (Placeholder extends `${infer Name}:${infer _TypeAndFormatters}`
-						? Name
-						: Placeholder extends `${infer Name}|${infer _Formatters}`
-							? Name
-							: Placeholder)
-				| ExtractPlaceholders<Rest>
-		: never;
 
 // Check if the key is plural
 type HasPluralKeys<
@@ -140,20 +167,22 @@ type HasPluralKeys<
 		: true;
 type IsPlural<Path extends string> = HasPluralKeys<Translations, Path>;
 
-// Get value(s) for a key (handles both regular and plural)
 type InternalGetValue<
 	T,
 	Path extends string,
 > = Path extends `${infer K}.${infer Rest}`
 	? K extends keyof T
 		? InternalGetValue<T[K], Rest>
-		: never
+		: string
 	: Path extends keyof T
 		? T[Path]
-		: T[PluralKeys<Path> & keyof T];
-
-type GetValue<Path extends string> = Exclude<
-	InternalGetValue<Translations, Path>,
+		: T[PluralKeys<Path> & keyof T] extends infer V
+			? unknown extends V
+				? string
+				: Exclude<V, undefined>
+			: string;
+type GetValue<S extends PossibleTranslationKeys> = Exclude<
+	InternalGetValue<Translations, S>,
 	undefined
 >;
 
@@ -163,7 +192,7 @@ export type DeepResolve<T> = T extends (...args: any[]) => any
 		? { -readonly [K in keyof T]: DeepResolve<T[K]> }
 		: T;
 
-// Given a translations object returns a function that can be used to translate keys
+// Runtime implementation remains the same
 export const getTranslate = (
 	translations: TranslationType,
 	locale: Locales,
@@ -174,13 +203,10 @@ export const getTranslate = (
 
 	function translate<Key extends PossibleTranslationKeys>(
 		key: Key,
-		...arguments_: InterpolationProperties<GetValue<Key>> extends Record<
-			string,
-			never
-		>
+		...arguments_: InterpolationProperties<Key> extends Record<string, never>
 			? []
 			: Key extends PossibleTranslationKeys
-				? [params: InterpolationProperties<GetValue<Key>>]
+				? [params: InterpolationProperties<Key>]
 				: []
 	): GetValue<Key> & TranslatedMark {
 		type Value = GetValue<Key> & TranslatedMark;
@@ -191,6 +217,7 @@ export const getTranslate = (
 		let value = key as string;
 		let isPlural = false;
 		let lastPart = '';
+
 		for (const part of parts) {
 			if (current && current[part]) {
 				if (typeof current[part] === 'string') {
@@ -208,7 +235,7 @@ export const getTranslate = (
 						return baseTranslate(key, parameters) as Value;
 					}
 					console.error(`Translation key "${key}" not found`);
-					return key as Value;
+					return key as unknown as Value;
 				}
 			}
 		}
@@ -220,7 +247,7 @@ export const getTranslate = (
 					return baseTranslate(key, parameters) as Value;
 				}
 				console.error(`Missing count value for plural key "${key}"`);
-				return key as Value;
+				return key as unknown as Value;
 			}
 			const count = Number(parameters.count);
 			const none = current[`${lastPart}_none`];
@@ -239,7 +266,7 @@ export const getTranslate = (
 				console.warn(
 					`'Missing other translation for: ${key} with count ${count}`
 				);
-				return key as Value;
+				return key as unknown as Value;
 			}
 		}
 
@@ -276,7 +303,33 @@ export const getTranslate = (
 	return translate;
 };
 
-export { initReact } from './react.js';
+export const createNamespaceTranslate = <NameSpace extends NameSpaces>(
+	namespace: NameSpace,
+	translateFn: TranslateFunctionType
+) => {
+	return <Key extends NamespaceKeys<NameSpace>>(
+		key: Key,
+		...args: InterpolationProperties<
+			`${NameSpace}.${Key}` & PossibleTranslationKeys
+		> extends Record<string, never>
+			? []
+			: `${NameSpace}.${Key}` &
+						PossibleTranslationKeys extends PossibleTranslationKeys
+				? [
+						params: InterpolationProperties<
+							`${NameSpace}.${Key}` & PossibleTranslationKeys
+						>,
+					]
+				: []
+	) => {
+		type FullKey = `${NameSpace}.${Key}` & PossibleTranslationKeys;
+		const fullKey = `${namespace}.${key}` as FullKey;
+		return translateFn(fullKey, ...(args as any));
+	};
+};
+
+export { initReact } from './adapters/react.js';
+export { initZustand } from './adapters/zustand.js';
 
 export { type Formatter, default as defaultFormatters } from './formatters.js';
 

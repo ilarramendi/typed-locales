@@ -1,8 +1,4 @@
-import type {
-	EnsureValidTranslation,
-	TranslationType,
-	ValidateTranslation,
-} from '../../index';
+import type { EnsureValidTranslation, ValidateTranslation } from '../../index';
 
 const test: EnsureValidTranslation<ValidateTranslation<typeof en>> = 0;
 void test;
@@ -10,6 +6,7 @@ const en = {
 	test: 'Hello {who:string|capitalize}!',
 	nested: {
 		deep: {
+			hello: 'Hello',
 			again: 'Nested again {value:number|number}',
 		},
 	},

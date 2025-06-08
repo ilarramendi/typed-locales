@@ -1,33 +1,38 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
-import { getTranslate, type ExtraFormatters, type Locales, type TranslationType } from './index.js';
+import {
+	getTranslate,
+	createNamespaceTranslate,
+	type ExtraFormatters,
+	type Locales,
+	type TranslationType,
+	type NameSpaces
+} from '../index.js';
 
 export interface TranslationContextType {
 	isLoading: boolean;
-	locale: Locales;
+	locale?: Locales;
 	setLocale: (locale: Locales) => Promise<Locales>;
 	t: ReturnType<typeof getTranslate>;
 }
 
 // Initial translation always should be loaded
 export const initReact = (
-	initialTranslation: TranslationType,
-	initialLocale: Locales,
-	allTranslations: Record<Locales, (() => Promise<{default: TranslationType}>) | TranslationType>,
+	allTranslations: Record<Locales, () => Promise<{ default: TranslationType }>>,
 	extraFormatters: ExtraFormatters,
+	fallbackLocale?: Locales
 ) => {
 	const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
-	const initialTranslate = getTranslate(initialTranslation, initialLocale, extraFormatters);
 
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const [state, setState] = useState<{
 			isLoading: boolean;
-			locale: Locales;
-			translate: typeof initialTranslate;
+			locale?: Locales;
+			translate: ReturnType<typeof getTranslate>;
 		}>({
 			isLoading: false,
-			locale: initialLocale,
-			translate: initialTranslate,
+			locale: undefined,
+			translate: ((key: string) => key) as any,
 		});
 
 		const setLocale = useCallback(async (targetLocale: Locales) => {
@@ -42,6 +47,17 @@ export const initReact = (
 					translationData = translationOrLoader;
 				}
 
+				let fallbackTranslationData: TranslationType;
+				if (fallbackLocale) {
+					const fallbackTranslationOrLoader = allTranslations[targetLocale];
+
+					if (typeof fallbackTranslationOrLoader === 'function') {
+						fallbackTranslationData = await fallbackTranslationOrLoader().then(t => t.default);
+					} else {
+						fallbackTranslationData = fallbackTranslationOrLoader;
+					}
+				}
+
 				setState({
 					isLoading: false,
 					locale: targetLocale,
@@ -49,7 +65,11 @@ export const initReact = (
 						translationData,
 						targetLocale,
 						extraFormatters,
-						initialLocale === targetLocale ? undefined : initialTranslate,
+						fallbackLocale === targetLocale || !fallbackLocale ? undefined : getTranslate(
+							fallbackTranslationData!,
+							fallbackLocale,
+							extraFormatters
+						),
 					),
 				});
 			} catch (error) {
@@ -74,16 +94,27 @@ export const initReact = (
 		);
 	};
 
-	const useTranslation = () => {
+	// Overloaded useTranslation function
+	function useTranslation(): TranslationContextType;
+	function useTranslation<NS extends NameSpaces>(namespace: NS): Omit<TranslationContextType, 't'> & {
+		t: ReturnType<typeof createNamespaceTranslate<NS>>;
+	};
+	function useTranslation<NS extends NameSpaces>(namespace?: NS) {
 		const context = useContext(TranslationContext);
 		if (!context) throw new Error('useTranslation must be used within a TranslationProvider');
+		const t = useMemo(
+			() => namespace ? createNamespaceTranslate(namespace, context.t) : context.t,
+			[namespace, context]
+		)
 
-		return context;
-	};
+		return {
+			...context,
+			t,
+		};
+	}
 
 	return {
 		TranslationProvider,
 		useTranslation,
 	};
 };
-

@@ -1,6 +1,6 @@
 import en from './translations/en';
 import es from './translations/es';
-import { getTranslate, type Formatter } from '..';
+import { createNamespaceTranslate, getTranslate, type Formatter } from '..';
 
 const customFormatters = {
 	// Make one char uppercase and one lower interchangebly
@@ -22,6 +22,7 @@ declare module '../../src/index' {
 
 const defaultTranslate = getTranslate(en, 'en-US', customFormatters);
 const translate = getTranslate(es, 'es-ES', customFormatters, defaultTranslate);
+const nestedTranslate = createNamespaceTranslate('nested.deep', translate);
 
 const result = {
 	test: translate('test', {
@@ -29,14 +30,16 @@ const result = {
 	}),
 	nested: {
 		deep: {
-			again: translate('nested.deep.again', {
+			again: nestedTranslate('again', {
+				// Using namespace
 				value: 100000000, // Only number allowed
 			}),
+			hello: translate('nested.deep.hello'),
 		},
 	},
 	test2_none: translate('test2', { count: 0 }), // Count prop from plurals is always number
 	test2_one: translate('test2', { count: 1 }),
-	test2_other: translate('test2', { count: '69' }), // TODO fix
+	test2_other: translate('test2', { count: 69 }),
 	customFormatter: translate('customFormatter', {
 		data: 'custom formatter data',
 	}),

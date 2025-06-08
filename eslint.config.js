@@ -24,7 +24,7 @@ export default defineConfig([
 			globals: globals.node,
 		},
 	},
-	...tseslint.configs.recommended,
+	tseslint.configs.base,
 	{
 		files: ['**/*.md'],
 		plugins: {

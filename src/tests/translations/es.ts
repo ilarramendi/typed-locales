@@ -12,6 +12,7 @@ const es = {
 	nested: {
 		deep: {
 			again: 'Anidado nuevamente {value|currency}',
+			hello: 'Hola',
 		},
 	},
 	test2_none: 'Plural ninguno', // Not present in EN
