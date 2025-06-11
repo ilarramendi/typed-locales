@@ -2,11 +2,9 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 
 import {
 	getTranslate,
-	createNamespaceTranslate,
 	type ExtraFormatters,
 	type Locales,
 	type TranslationType,
-	type NameSpaces
 } from '../index.js';
 
 export interface TranslationContextType {
@@ -95,22 +93,11 @@ export const initReact = (
 	};
 
 	// Overloaded useTranslation function
-	function useTranslation(): TranslationContextType;
-	function useTranslation<NS extends NameSpaces>(namespace: NS): Omit<TranslationContextType, 't'> & {
-		t: ReturnType<typeof createNamespaceTranslate<NS>>;
-	};
-	function useTranslation<NS extends NameSpaces>(namespace?: NS) {
+	function useTranslation() {
 		const context = useContext(TranslationContext);
 		if (!context) throw new Error('useTranslation must be used within a TranslationProvider');
-		const t = useMemo(
-			() => namespace ? createNamespaceTranslate(namespace, context.t) : context.t,
-			[namespace, context]
-		)
 
-		return {
-			...context,
-			t,
-		};
+		return context;
 	}
 
 	return {

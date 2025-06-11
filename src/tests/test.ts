@@ -1,6 +1,6 @@
 import en from './translations/en';
 import es from './translations/es';
-import { createNamespaceTranslate, getTranslate, type Formatter } from '..';
+import { getTranslate, initZustand, type Formatter } from '..';
 
 const customFormatters = {
 	// Make one char uppercase and one lower interchangebly
@@ -22,7 +22,6 @@ declare module '../../src/index' {
 
 const defaultTranslate = getTranslate(en, 'en-US', customFormatters);
 const translate = getTranslate(es, 'es-ES', customFormatters, defaultTranslate);
-const nestedTranslate = createNamespaceTranslate('nested.deep', translate);
 
 const result = {
 	test: translate('test', {
@@ -30,10 +29,6 @@ const result = {
 	}),
 	nested: {
 		deep: {
-			again: nestedTranslate('again', {
-				// Using namespace
-				value: 100000000, // Only number allowed
-			}),
 			hello: translate('nested.deep.hello'),
 		},
 	},
@@ -44,4 +39,15 @@ const result = {
 		data: 'custom formatter data',
 	}),
 };
+
 console.log(result);
+
+const store = initZustand(
+	{
+		'en-US': () => import('./translations/en'),
+		'es-ES': () => import('./translations/es'),
+	},
+	customFormatters
+);
+
+console.log(store.getState().t('nested.deep.hello'));

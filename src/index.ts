@@ -35,18 +35,11 @@ export type TranslationType = DeepResolve<
 export type Locales = Overrides['locales'];
 /** All possible translation keys */
 export type PossibleTranslationKeys = DotNestedStringKeys<Translations>;
-/** All existing namespaces */
-export type NameSpaces = DotNestedObjectKeys<Translations>;
 export type ExtraFormatters = Overrides['extraFormatters'];
 /** Base formatters + Custom formatters */
 export type FormatterTypes = keyof ExtraFormatters | keyof typeof formatters;
 export type TranslateFunctionType = ReturnType<typeof getTranslate>;
 
-/** Get all possible translations for a given namespace */
-export type NamespaceKeys<Namespace extends NameSpaces> = FilterByPrefix<
-	PossibleTranslationKeys,
-	Namespace
->;
 type TranslatedMark = { translated: true };
 
 /** Ensure a string is translated */
@@ -55,11 +48,10 @@ export type TranslatedString = string & TranslatedMark;
 export type InterpolationProperties<
 	Key extends PossibleTranslationKeys,
 	Value extends string = GetValue<Key>,
-> = DeepResolve<
+> =
 	IsPlural<Key> extends true
 		? { count: number } & Omit<ExtractParams<Value>, 'count'>
-		: ExtractParams<Value>
->;
+		: ExtractParams<Value>;
 
 type ExtractParams<Value extends string> =
 	Value extends `${infer _}{${infer _}}${infer _}`
@@ -109,19 +101,54 @@ type DotNestedObjectKeys<T, Prefix extends string = ''> = T extends object
 		}[keyof T]
 	: never;
 
-export type GenerateTranslationType<T> = {
-	[K in keyof T as IsPlural<
-		RemovePluralSuffix<K & string> & PossibleTranslationKeys
-	> extends true
-		? never
-		: K]: T[K] extends object ? GenerateTranslationType<T[K]> : string;
-} & {
-	[K in keyof T as IsPlural<
-		RemovePluralSuffix<K & string> & PossibleTranslationKeys
-	> extends true
-		? K | PluralKeys<RemovePluralSuffix<K & string>>
-		: never]?: T[K] extends object ? GenerateTranslationType<T[K]> : string;
-};
+// Helper types to break down complexity
+type IsPluralKey<K> = K extends
+	| `${string}_none`
+	| `${string}_one`
+	| `${string}_other`
+	? true
+	: false;
+
+type GetBasePluralKey<K> = K extends `${infer Base}_none`
+	? Base
+	: K extends `${infer Base}_one`
+		? Base
+		: K extends `${infer Base}_other`
+			? Base
+			: K;
+
+// Pre-compute plural key mappings to avoid deep nesting
+type PluralKeyVariants<Base extends string> =
+	| `${Base}_none`
+	| `${Base}_one`
+	| `${Base}_other`;
+
+type GenerateBaseTranslationType<T, Depth extends number = 0> = Depth extends 6
+	? any // Depth limit to prevent infinite recursion
+	: {
+			[K in keyof T as IsPluralKey<K> extends true
+				? never
+				: K]: T[K] extends object
+				? GenerateBaseTranslationType<T[K], [...Array<Depth>, 0]['length']>
+				: string;
+		};
+
+type GeneratePluralTranslationType<
+	T,
+	Depth extends number = 0,
+> = Depth extends 6
+	? {} // Depth limit
+	: {
+			[K in keyof T as IsPluralKey<K> extends true
+				? K | PluralKeyVariants<GetBasePluralKey<K & string>>
+				: never]?: T[K] extends object
+				? GeneratePluralTranslationType<T[K], [...Array<Depth>, 0]['length']>
+				: string;
+		};
+
+// Combine the two simpler types
+export type GenerateTranslationType<T> = GenerateBaseTranslationType<T> &
+	GeneratePluralTranslationType<T>;
 
 type ExtractPlaceholders<
 	T extends string,
@@ -301,31 +328,6 @@ export const getTranslate = (
 	}
 
 	return translate;
-};
-
-export const createNamespaceTranslate = <NameSpace extends NameSpaces>(
-	namespace: NameSpace,
-	translateFn: TranslateFunctionType
-) => {
-	return <Key extends NamespaceKeys<NameSpace>>(
-		key: Key,
-		...args: InterpolationProperties<
-			`${NameSpace}.${Key}` & PossibleTranslationKeys
-		> extends Record<string, never>
-			? []
-			: `${NameSpace}.${Key}` &
-						PossibleTranslationKeys extends PossibleTranslationKeys
-				? [
-						params: InterpolationProperties<
-							`${NameSpace}.${Key}` & PossibleTranslationKeys
-						>,
-					]
-				: []
-	) => {
-		type FullKey = `${NameSpace}.${Key}` & PossibleTranslationKeys;
-		const fullKey = `${namespace}.${key}` as FullKey;
-		return translateFn(fullKey, ...(args as any));
-	};
 };
 
 export { initReact } from './adapters/react.js';
