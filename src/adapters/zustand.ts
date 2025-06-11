@@ -19,13 +19,20 @@ interface TranslationState {
 
 export const initZustand = (
 	allTranslations: Record<Locales, TranslationLoader | TranslationType>,
-	extraFormatters: ExtraFormatters
+	extraFormatters: ExtraFormatters,
+	defaultLocale?: Locales
 ) => {
 	const identityTranslate = ((key: string) => key) as TranslateFunctionType;
 
+	if (defaultLocale && typeof allTranslations[defaultLocale] !== 'object') {
+		throw new Error(
+			'Default locale in all translations object cant be a promise'
+		);
+	}
+
 	return create<TranslationState>((set, get) => ({
 		isLoading: false,
-		locale: undefined,
+		locale: defaultLocale,
 		setLocale: async (targetLocale: Locales) => {
 			if (get().locale === targetLocale) return;
 
@@ -51,7 +58,12 @@ export const initZustand = (
 				set({ isLoading: false });
 			}
 		},
-
-		t: identityTranslate,
+		t: defaultLocale
+			? getTranslate(
+					allTranslations[defaultLocale] as TranslationType,
+					defaultLocale,
+					extraFormatters
+				)
+			: identityTranslate,
 	}));
 };
