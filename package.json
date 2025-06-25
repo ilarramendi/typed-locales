@@ -1,36 +1,36 @@
 {
-  "name": "typed-locales",
-  "version": "1.0.49",
-  "description": "Type safe utilities for translating strings",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "type": "module",
-  "scripts": {
-    "build": "rimraf dist && tsc",
-    "dev": "tsx watch src/test.tsx",
-    "deploy": "npm run build && npm publish --access public",
-    "test": "tsx ./src/tests/test.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.6.2",
-  "dependencies": {
-    "react": "^19.1.0",
-    "rimraf": "^6.0.1",
-    "tsx": "^4.19.4",
-    "typescript": "^5.8.3",
-    "zustand": "^5.0.5"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.28.0",
-    "@eslint/markdown": "^6.4.0",
-    "@types/react": "^19.1.5",
-    "eslint": "^9.28.0",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-prettier": "^5.4.1",
-    "globals": "^16.2.0",
-    "prettier": "^3.5.3",
-    "typescript-eslint": "^8.33.0"
-  }
+	"name": "typed-locales",
+	"version": "1.0.50",
+	"description": "Type safe utilities for translating strings",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"type": "module",
+	"scripts": {
+		"build": "rimraf dist && tsc",
+		"dev": "tsx watch src/test.tsx",
+		"deploy": "npm run build && npm publish --access public",
+		"test": "tsx ./src/tests/test.ts"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"packageManager": "pnpm@10.6.2",
+	"dependencies": {
+		"react": "^19.1.0",
+		"rimraf": "^6.0.1",
+		"tsx": "^4.19.4",
+		"typescript": "^5.8.3",
+		"zustand": "^5.0.5"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.28.0",
+		"@eslint/markdown": "^6.4.0",
+		"@types/react": "^19.1.5",
+		"eslint": "^9.28.0",
+		"eslint-config-prettier": "^10.1.5",
+		"eslint-plugin-prettier": "^5.4.1",
+		"globals": "^16.2.0",
+		"prettier": "^3.5.3",
+		"typescript-eslint": "^8.33.0"
+	}
 }
