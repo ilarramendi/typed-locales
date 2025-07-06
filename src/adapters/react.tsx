@@ -34,7 +34,10 @@ const addExtraTranslations = (
 		const parts = key.split('.');
 		const lastPart = parts.pop();
 		for (const part of parts) {
-			current = current[part] ?? {};
+			if (current[part] === undefined) {
+				current[part] = {};
+			}
+			current = current[part];
 		}
 		if (lastPart) {
 			current[lastPart] = extraTranslations[key];
@@ -148,13 +151,11 @@ export const initReact = (
 	return TranslationProvider;
 };
 
-const useTranslation = () => {
+export const useTranslation = () => {
 	const context = useContext(TranslationContext);
 	if (!context)
 		throw new Error('useTranslation must be used within a TranslationProvider');
 
 	return context;
 };
-
-export default useTranslation;
 

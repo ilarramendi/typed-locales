@@ -330,7 +330,7 @@ export const getTranslate = (
 	return translate;
 };
 
-export { initReact } from './adapters/react.js';
+export { initReact, useTranslation } from './adapters/react.js';
 export { initZustand } from './adapters/zustand.js';
 
 export { type Formatter, default as defaultFormatters } from './formatters.js';
