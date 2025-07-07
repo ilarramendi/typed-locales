@@ -23,15 +23,24 @@ const TranslationContext = createContext<
 	TranslationContextType | undefined
 >(undefined);
 
+type ExtraTranslation = {
+	[locale in Locales]?: string;
+} & {
+	key: string;
+};
+
+type ExtraTranslations = ExtraTranslation[];
+
 
 const addExtraTranslations = (
 	translation: TranslationType,
-	extraTranslations: Record<string, string>
+	extraTranslations: ExtraTranslations,
+	locale: Locales
 ) => {
 	let current: any = translation;
-	for (const key in extraTranslations) {
+	for (const extraTranslation of extraTranslations) {
 		current = translation;
-		const parts = key.split('.');
+		const parts = extraTranslation.key.split('.');
 		const lastPart = parts.pop();
 		for (const part of parts) {
 			if (current[part] === undefined) {
@@ -39,8 +48,8 @@ const addExtraTranslations = (
 			}
 			current = current[part];
 		}
-		if (lastPart) {
-			current[lastPart] = extraTranslations[key];
+		if (lastPart && extraTranslation[locale] !== undefined) {
+			current[lastPart] = extraTranslation[locale];
 		}
 	}
 	return translation;
@@ -55,7 +64,7 @@ export const initReact = (
 	extraFormatters: ExtraFormatters,
 	defaultLocale: Locales,
 	fallbackLocale?: Locales,
-	extraTranslations?: Record<Locales, Record<string, string>>
+	extraTranslations?: ExtraTranslations
 ) => {
 	const defaultTranslations = allTranslations[defaultLocale];
 	if (typeof defaultTranslations === 'function') {
@@ -75,7 +84,8 @@ export const initReact = (
 			translate: getTranslate(
 				addExtraTranslations(
 					defaultTranslations,
-					extraTranslations?.[defaultLocale] ?? {}
+					extraTranslations ?? [],
+					defaultLocale
 				),
 				defaultLocale,
 				extraFormatters
@@ -111,7 +121,7 @@ export const initReact = (
 					isLoading: false,
 					locale: targetLocale,
 					translate: getTranslate(
-						addExtraTranslations(translationData, extraTranslations?.[targetLocale] ?? {}),
+						addExtraTranslations(translationData, extraTranslations ?? [], targetLocale),
 						targetLocale,
 						extraFormatters,
 						fallbackLocale === targetLocale || !fallbackLocale
