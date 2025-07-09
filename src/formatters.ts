@@ -1,5 +1,6 @@
 import type { ValueType } from './index.js';
 
+// eslint-disable-next-line no-unused-vars
 export type Formatter = (value: ValueType, locale: string) => ValueType;
 
 const formatters = {

@@ -123,13 +123,11 @@ type PluralKeyVariants<Base extends string> =
 	| `${Base}_one`
 	| `${Base}_other`;
 
-type GenerateBaseTranslationType<T, Depth extends number = 0> = Depth extends 6
+type GenerateTranslationType<T, Depth extends number = 0> = Depth extends 6
 	? any // Depth limit to prevent infinite recursion
 	: {
-			[K in keyof T as IsPluralKey<K> extends true
-				? never
-				: K]: T[K] extends object
-				? GenerateBaseTranslationType<T[K], [...Array<Depth>, 0]['length']>
+			[K in keyof T]: T[K] extends object
+				? GenerateTranslationType<T[K], [...Array<Depth>, 0]['length']>
 				: string;
 		};
 
@@ -145,10 +143,6 @@ type GeneratePluralTranslationType<
 				? GeneratePluralTranslationType<T[K], [...Array<Depth>, 0]['length']>
 				: string;
 		};
-
-// Combine the two simpler types
-export type GenerateTranslationType<T> = GenerateBaseTranslationType<T> &
-	GeneratePluralTranslationType<T>;
 
 type ExtractPlaceholders<
 	T extends string,

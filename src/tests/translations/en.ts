@@ -9,10 +9,10 @@ const en = {
 			hello: 'Hello',
 			again: 'Nested again {value:number|number}',
 		},
+		test2_one: 'Plural one',
 	},
-	// Key not used test2_none
-	test2_one: 'Plural one',
-	test2_other: 'Plural: {count}',
+	test2_none: 'Plural ninguno',
+	test2_other: 'Plural otros {count}',
 	customFormatter: 'Test formatter {data|customFormatter}',
 } as const;
 

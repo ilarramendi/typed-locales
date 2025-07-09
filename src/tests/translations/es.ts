@@ -14,10 +14,11 @@ const es = {
 			again: 'Anidado nuevamente {value|currency}',
 			hello: 'Hola',
 		},
+		test2_one: 'Plural uno',
 	},
-	test2_none: 'Plural ninguno', // Not present in EN
-	test2_one: undefined, // Key not used test2_one, fallbacks to other
+	test2_none: 'Plural ninguno',
 	test2_other: 'Plural otros {count}',
 	customFormatter: 'Prueba formatter {data|customFormatter}',
 } as const satisfies TranslationType;
+
 export default es;
