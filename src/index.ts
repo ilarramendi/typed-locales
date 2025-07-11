@@ -333,3 +333,20 @@ export {
 	type ValidateTranslation,
 	type EnsureValidTranslation,
 } from './validation.js';
+
+/**
+ * @description Convert import.meta.glob to a record of locales and the function to import the translations
+ * @param files - The files to convert
+ * @returns A record of locales and the function to import the translations
+ * @example
+ * ```ts
+ * const translations = translationsFromImportMeta(import.meta.glob('../translations/*.ts'));
+ * ```
+ */
+export const translationsFromImportMeta = (files: Record<string, any>) =>
+	Object.fromEntries(
+		Object.entries(files).map(([key, value]) => [
+			key.split('/').at(-1)!.replace('.ts', ''),
+			value,
+		])
+	) as Record<Locales, () => Promise<{ default: object }>>;

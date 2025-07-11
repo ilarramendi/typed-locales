@@ -57,23 +57,25 @@ const addExtraTranslations = (
 
 // Initial translation always should be loaded
 export const initReact = (
+	defaultTranslations: object,
 	allTranslations: Record<
 		Locales,
-		(() => Promise<{ default: TranslationType }>) | TranslationType
+		() => Promise<{ default: object }>
 	>,
 	extraFormatters: ExtraFormatters,
 	defaultLocale: Locales,
-	fallbackLocale?: Locales,
 	extraTranslations?: ExtraTranslations
 ) => {
-	const defaultTranslations = allTranslations[defaultLocale];
-	if (typeof defaultTranslations === 'function') {
-		throw new Error(
-			'Default locale in all translations object cant be a promise'
-		);
-	}
-
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
+		const defaultTranslate = getTranslate(
+			addExtraTranslations(
+				defaultTranslations as any,
+				extraTranslations ?? [],
+				defaultLocale
+			),
+			defaultLocale,
+			extraFormatters
+		)
 		const [state, setState] = useState<{
 			isLoading: boolean;
 			locale?: Locales;
@@ -81,41 +83,13 @@ export const initReact = (
 		}>({
 			isLoading: false,
 			locale: defaultLocale,
-			translate: getTranslate(
-				addExtraTranslations(
-					defaultTranslations,
-					extraTranslations ?? [],
-					defaultLocale
-				),
-				defaultLocale,
-				extraFormatters
-			),
+			translate: defaultTranslate,
 		});
 
 		const setLocale = useCallback(async (targetLocale: Locales) => {
 			try {
 				const translationOrLoader = allTranslations[targetLocale];
-				let translationData: TranslationType;
-
-				if (typeof translationOrLoader === 'function') {
-					setState(previous => ({ ...previous, isLoading: true }));
-					translationData = await translationOrLoader().then(t => t.default);
-				} else {
-					translationData = translationOrLoader;
-				}
-
-				let fallbackTranslationData: TranslationType;
-				if (fallbackLocale) {
-					const fallbackTranslationOrLoader = allTranslations[targetLocale];
-
-					if (typeof fallbackTranslationOrLoader === 'function') {
-						fallbackTranslationData = await fallbackTranslationOrLoader().then(
-							t => t.default
-						);
-					} else {
-						fallbackTranslationData = fallbackTranslationOrLoader;
-					}
-				}
+				const translationData = await translationOrLoader().then(t => t.default) as any;
 
 				setState({
 					isLoading: false,
@@ -124,13 +98,7 @@ export const initReact = (
 						addExtraTranslations(translationData, extraTranslations ?? [], targetLocale),
 						targetLocale,
 						extraFormatters,
-						fallbackLocale === targetLocale || !fallbackLocale
-							? undefined
-							: getTranslate(
-									fallbackTranslationData!,
-									fallbackLocale,
-									extraFormatters
-								)
+						defaultTranslate
 					),
 				});
 			} catch (error) {
