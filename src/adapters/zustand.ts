@@ -12,7 +12,7 @@ type TranslationLoader = () => Promise<{ default: TranslationType }>;
 interface TranslationState {
 	isLoading: boolean;
 	locale?: Locales;
-	// eslint-disable-next-line no-unused-vars
+
 	setLocale: (locale: Locales) => Promise<void>;
 	t: TranslateFunctionType;
 }

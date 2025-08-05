@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import baseFormatters from './formatters.js';
 import formatters, { type Formatter } from './formatters.js';
 

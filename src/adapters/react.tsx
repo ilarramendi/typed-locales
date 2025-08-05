@@ -1,9 +1,4 @@
-import React, {
-	createContext,
-	useCallback,
-	useContext,
-	useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 
 import {
 	getTranslate,
@@ -19,9 +14,9 @@ export interface TranslationContextType {
 	t: ReturnType<typeof getTranslate>;
 }
 
-const TranslationContext = createContext<
-	TranslationContextType | undefined
->(undefined);
+const TranslationContext = createContext<TranslationContextType | undefined>(
+	undefined
+);
 
 type ExtraTranslation = {
 	[locale in Locales]?: string;
@@ -58,10 +53,7 @@ const addExtraTranslations = (
 // Initial translation always should be loaded
 export const initReact = (
 	defaultTranslations: object,
-	allTranslations: Record<
-		Locales,
-		() => Promise<{ default: object }>
-	>,
+	allTranslations: Record<Locales, () => Promise<{ default: object }>>,
 	extraFormatters: ExtraFormatters,
 	defaultLocale: Locales,
 	extraTranslations?: ExtraTranslations
@@ -75,7 +67,7 @@ export const initReact = (
 			),
 			defaultLocale,
 			extraFormatters
-		)
+		);
 		const [state, setState] = useState<{
 			isLoading: boolean;
 			locale?: Locales;
@@ -86,35 +78,44 @@ export const initReact = (
 			translate: defaultTranslate,
 		});
 
-		const setLocale = useCallback(async (targetLocale: Locales) => {
-			if (state.locale === targetLocale) {
+		const setLocale = useCallback(
+			async (targetLocale: Locales) => {
+				if (state.locale === targetLocale) {
+					return targetLocale;
+				}
+
+				try {
+					const translationOrLoader = allTranslations[targetLocale];
+					const translationData = (await translationOrLoader().then(
+						t => t.default
+					)) as any;
+
+					setState({
+						isLoading: false,
+						locale: targetLocale,
+						translate: getTranslate(
+							addExtraTranslations(
+								translationData,
+								extraTranslations ?? [],
+								targetLocale
+							),
+							targetLocale,
+							extraFormatters,
+							defaultTranslate
+						),
+					});
+				} catch (error) {
+					console.error(
+						`Failed to load translations for locale ${String(targetLocale)}:`,
+						error
+					);
+					setState(previous => ({ ...previous, isLoading: false }));
+				}
+
 				return targetLocale;
-			}
-
-			try {
-				const translationOrLoader = allTranslations[targetLocale];
-				const translationData = await translationOrLoader().then(t => t.default) as any;
-
-				setState({
-					isLoading: false,
-					locale: targetLocale,
-					translate: getTranslate(
-						addExtraTranslations(translationData, extraTranslations ?? [], targetLocale),
-						targetLocale,
-						extraFormatters,
-						defaultTranslate
-					),
-				});
-			} catch (error) {
-				console.error(
-					`Failed to load translations for locale ${String(targetLocale)}:`,
-					error
-				);
-				setState(previous => ({ ...previous, isLoading: false }));
-			}
-
-			return targetLocale;
-		}, []);
+			},
+			[state]
+		);
 
 		return (
 			<TranslationContext.Provider
@@ -140,4 +141,3 @@ export const useTranslation = () => {
 
 	return context;
 };
-
