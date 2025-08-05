@@ -87,6 +87,10 @@ export const initReact = (
 		});
 
 		const setLocale = useCallback(async (targetLocale: Locales) => {
+			if (state.locale === targetLocale) {
+				return targetLocale;
+			}
+
 			try {
 				const translationOrLoader = allTranslations[targetLocale];
 				const translationData = await translationOrLoader().then(t => t.default) as any;
