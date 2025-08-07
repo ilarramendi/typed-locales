@@ -26,7 +26,6 @@ type ExtraTranslation = {
 
 type ExtraTranslations = ExtraTranslation[];
 
-
 const addExtraTranslations = (
 	translation: TranslationType,
 	extraTranslations: ExtraTranslations,
@@ -114,7 +113,7 @@ export const initReact = (
 
 				return targetLocale;
 			},
-			[state]
+			[state, defaultTranslate]
 		);
 
 		return (
