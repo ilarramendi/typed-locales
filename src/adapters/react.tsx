@@ -1,4 +1,10 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, {
+	createContext,
+	useCallback,
+	useContext,
+	useMemo,
+	useState,
+} from 'react';
 
 import {
 	getTranslate,
@@ -58,14 +64,18 @@ export const initReact = (
 	extraTranslations?: ExtraTranslations
 ) => {
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
-		const defaultTranslate = getTranslate(
-			addExtraTranslations(
-				defaultTranslations as any,
-				extraTranslations ?? [],
-				defaultLocale
-			),
-			defaultLocale,
-			extraFormatters
+		const defaultTranslate = useMemo(
+			() =>
+				getTranslate(
+					addExtraTranslations(
+						defaultTranslations as any,
+						extraTranslations ?? [],
+						defaultLocale
+					),
+					defaultLocale,
+					extraFormatters
+				),
+			[]
 		);
 		const [state, setState] = useState<{
 			isLoading: boolean;
@@ -85,6 +95,10 @@ export const initReact = (
 
 				try {
 					const translationOrLoader = allTranslations[targetLocale];
+					if (!translationOrLoader) {
+						throw new Error(`Translation loader not found`);
+					}
+
 					const translationData = (await translationOrLoader().then(
 						t => t.default
 					)) as any;
@@ -106,14 +120,14 @@ export const initReact = (
 				} catch (error) {
 					console.error(
 						`Failed to load translations for locale ${String(targetLocale)}:`,
-						error
+						(error as Error)?.message ?? error
 					);
 					setState(previous => ({ ...previous, isLoading: false }));
 				}
 
 				return targetLocale;
 			},
-			[state, defaultTranslate]
+			[defaultTranslate, state.locale]
 		);
 
 		return (
