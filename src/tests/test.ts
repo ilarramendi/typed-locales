@@ -28,11 +28,13 @@ const result = {
 	}),
 	nested: {
 		deep: {
-			hello: translate('nested.deep.hello'),
+			hello: translate('nested.deep.hello', undefined, {
+				fallback: 'fallback',
+			}),
 		},
 	},
 	test2_none: translate('test2', { count: 0 }), // Count prop from plurals is always number
-	test2_one: translate('test2', { count: 1 }),
+	test2_one: translate('test2', { count: 1 }, { fallback: 'fallback' }),
 	test2_other: translate('test2', { count: 69 }),
 	customFormatter: translate('customFormatter', {
 		data: 'custom formatter data',

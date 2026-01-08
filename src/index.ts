@@ -215,8 +215,9 @@ export type DeepResolve<T> = T extends (...args: any[]) => any
 const getValue = (
 	key: string,
 	translations: any,
-	parameters: Record<string, any>
-): string => {
+	parameters: Record<string, any> | undefined,
+	silent: boolean
+): string | undefined => {
 	const parts = key.split('.');
 	let current = translations;
 
@@ -231,7 +232,7 @@ const getValue = (
 			// Handle plural keys
 			if (pluralSufixes.some(sufix => current[part + sufix] !== undefined)) {
 				const lastPart = parts.at(-1)!;
-				const count = Number(parameters.count ?? 0);
+				const count = Number(parameters?.count ?? 0);
 				const none = current[`${lastPart}_none`];
 				const one = current[`${lastPart}_one`];
 				const other = current[`${lastPart}_other`];
@@ -243,17 +244,25 @@ const getValue = (
 				} else if (typeof other === 'string') {
 					return other;
 				} else {
-					console.warn(
-						`'Missing plural translation for key "${key}" with count: ${count}`
-					);
-					return key;
+					if (!silent) {
+						console.warn(
+							`'Missing plural translation for key "${key}" with count: ${count}`
+						);
+					}
+					return undefined;
 				}
 			}
 		}
 	}
 
-	console.error(`Missing translation for key "${key}"`);
-	return key;
+	if (!silent) {
+		console.error(`Missing translation for key "${key}"`);
+	}
+	return undefined;
+};
+
+type OptionsType = {
+	fallback?: string;
 };
 
 // Runtime implementation remains the same
@@ -267,19 +276,23 @@ export const getTranslate = (
 	function translate<Key extends PossibleTranslationKeys>(
 		key: Key,
 		...arguments_: InterpolationProperties<Key> extends Record<string, never>
-			? []
+			? [params?: undefined, options?: OptionsType]
 			: Key extends PossibleTranslationKeys
-				? [params: InterpolationProperties<Key>]
-				: []
+				? [params: InterpolationProperties<Key>, options?: OptionsType]
+				: [params?: undefined, options?: OptionsType]
 	): GetValue<Key> & TranslatedMark {
+		const options = arguments_[1];
+		const parameters = arguments_[0] as Record<string, ValueType>;
 		type Value = GetValue<Key> & TranslatedMark;
 
-		const parameters = arguments_[0] as Record<string, ValueType>;
-		let value = getValue(key, translations, parameters);
+		let value =
+			getValue(key, translations, parameters, Boolean(options?.fallback)) ??
+			options?.fallback ??
+			key;
 
 		if (parameters) {
 			for (const [parameter, value_] of Object.entries(parameters)) {
-				value = value.replaceAll(
+				value = value?.replaceAll(
 					new RegExp(`{${parameter}(:\\w+)?(\\|[\\w|]+)?}`, 'g'),
 					(match, _type, formatters_) => {
 						const parsedFormatters = (formatters_?.split('|').filter(Boolean) ??
