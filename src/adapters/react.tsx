@@ -18,6 +18,8 @@ export interface TranslationContextType {
 	locale?: Locales;
 	setLocale: (locale: Locales) => Promise<Locales>;
 	t: ReturnType<typeof getTranslate>;
+	setShowKeys: (showKeys: boolean) => void;
+	showKeys: boolean;
 }
 
 const TranslationContext = createContext<TranslationContextType | undefined>(
@@ -61,8 +63,7 @@ export const initReact = (
 	allTranslations: Record<Locales, () => Promise<{ default: object }>>,
 	extraFormatters: ExtraFormatters,
 	defaultLocale: Locales,
-	extraTranslations?: ExtraTranslations,
-	showKeys?: boolean
+	extraTranslations?: ExtraTranslations
 ) => {
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const defaultTranslate = useMemo(
@@ -78,6 +79,7 @@ export const initReact = (
 				),
 			[]
 		);
+		const [showKeys, setShowKeys] = useState(false);
 		const [state, setState] = useState<{
 			isLoading: boolean;
 			locale?: Locales;
@@ -137,6 +139,8 @@ export const initReact = (
 					locale: state.locale,
 					setLocale,
 					t: showKeys ? (((key: string) => key) as any) : state.translate,
+					setShowKeys,
+					showKeys,
 				}}
 			>
 				{children}

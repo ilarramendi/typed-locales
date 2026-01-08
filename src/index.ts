@@ -212,6 +212,50 @@ export type DeepResolve<T> = T extends (...args: any[]) => any
 		? { -readonly [K in keyof T]: DeepResolve<T[K]> }
 		: T;
 
+const getValue = (
+	key: string,
+	translations: any,
+	parameters: Record<string, any>
+): string => {
+	const parts = key.split('.');
+	let current = translations;
+
+	for (const [index, part] of parts.entries()) {
+		if (typeof current[part] === 'string') {
+			return current[part];
+		}
+
+		if (current[part] !== undefined) {
+			current = current[part];
+		} else if (index === parts.length - 1) {
+			// Handle plural keys
+			if (pluralSufixes.some(sufix => current[part + sufix] !== undefined)) {
+				const lastPart = parts.at(-1)!;
+				const count = Number(parameters.count ?? 0);
+				const none = current[`${lastPart}_none`];
+				const one = current[`${lastPart}_one`];
+				const other = current[`${lastPart}_other`];
+
+				if (!count && typeof none === 'string') {
+					return none;
+				} else if (count === 1 && typeof one === 'string') {
+					return one;
+				} else if (typeof other === 'string') {
+					return other;
+				} else {
+					console.warn(
+						`'Missing plural translation for key "${key}" with count: ${count}`
+					);
+					return key;
+				}
+			}
+		}
+	}
+
+	console.error(`Missing translation for key "${key}"`);
+	return key;
+};
+
 // Runtime implementation remains the same
 export const getTranslate = (
 	translations: TranslationType,
@@ -230,61 +274,8 @@ export const getTranslate = (
 	): GetValue<Key> & TranslatedMark {
 		type Value = GetValue<Key> & TranslatedMark;
 
-		const parts = key.split('.');
 		const parameters = arguments_[0] as Record<string, ValueType>;
-		let current = translations as BaseTranslationType;
-		let value = key as string;
-		let isPlural = false;
-		let lastPart = '';
-
-		for (const part of parts) {
-			if (current && current[part]) {
-				if (typeof current[part] === 'string') {
-					value = current[part];
-					break;
-				}
-				current = current[part];
-			} else {
-				lastPart = parts.at(-1)!;
-				isPlural = pluralSufixes.some(
-					sufix => current[lastPart + sufix] !== undefined
-				);
-				if (!isPlural) {
-					console.error(`Translation key "${key}" not found`);
-					return key as unknown as Value;
-				}
-			}
-		}
-
-		// Handle plural keys
-		if (isPlural) {
-			if (typeof parameters?.count === 'undefined') {
-				console.error(`Missing count value for plural key "${key}"`);
-				return key as unknown as Value;
-			}
-			const count = Number(parameters.count);
-			const none = current[`${lastPart}_none`];
-			const one = current[`${lastPart}_one`];
-			const other = current[`${lastPart}_other`];
-
-			if (!count && typeof none === 'string') {
-				value = none;
-			} else if (count === 1 && typeof one === 'string') {
-				value = one;
-			} else if (typeof other === 'string') {
-				value = other;
-			} else {
-				console.warn(
-					`'Missing other translation for: ${key} with count ${count}`
-				);
-				return key as unknown as Value;
-			}
-		}
-
-		if (value === key || typeof value !== 'string') {
-			console.error(`Translation key "${key}" not found`);
-			return key as unknown as Value;
-		}
+		let value = getValue(key, translations, parameters);
 
 		if (parameters) {
 			for (const [parameter, value_] of Object.entries(parameters)) {
