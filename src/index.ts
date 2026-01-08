@@ -216,8 +216,7 @@ export type DeepResolve<T> = T extends (...args: any[]) => any
 export const getTranslate = (
 	translations: TranslationType,
 	locale: Locales,
-	extraFormatters: ExtraFormatters,
-	baseTranslate?: (...props: any) => string
+	extraFormatters: ExtraFormatters
 ) => {
 	const formatters = { ...baseFormatters, ...extraFormatters };
 
@@ -251,9 +250,6 @@ export const getTranslate = (
 					sufix => current[lastPart + sufix] !== undefined
 				);
 				if (!isPlural) {
-					if (baseTranslate) {
-						return baseTranslate(key, parameters) as Value;
-					}
 					console.error(`Translation key "${key}" not found`);
 					return key as unknown as Value;
 				}
@@ -263,9 +259,6 @@ export const getTranslate = (
 		// Handle plural keys
 		if (isPlural) {
 			if (typeof parameters?.count === 'undefined') {
-				if (baseTranslate) {
-					return baseTranslate(key, parameters) as Value;
-				}
 				console.error(`Missing count value for plural key "${key}"`);
 				return key as unknown as Value;
 			}
@@ -280,8 +273,6 @@ export const getTranslate = (
 				value = one;
 			} else if (typeof other === 'string') {
 				value = other;
-			} else if (baseTranslate) {
-				return baseTranslate(key, parameters) as Value;
 			} else {
 				console.warn(
 					`'Missing other translation for: ${key} with count ${count}`

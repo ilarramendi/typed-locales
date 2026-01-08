@@ -20,8 +20,7 @@ declare module '../../src/index' {
 	}
 }
 
-const defaultTranslate = getTranslate(en, 'en-US', customFormatters);
-const translate = getTranslate(es, 'es-ES', customFormatters, defaultTranslate);
+const translate = getTranslate(es, 'es-ES', customFormatters);
 
 const result = {
 	test: translate('test', {

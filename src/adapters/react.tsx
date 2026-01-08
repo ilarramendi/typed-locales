@@ -113,8 +113,7 @@ export const initReact = (
 								targetLocale
 							),
 							targetLocale,
-							extraFormatters,
-							defaultTranslate
+							extraFormatters
 						),
 					});
 				} catch (error) {
@@ -127,7 +126,7 @@ export const initReact = (
 
 				return targetLocale;
 			},
-			[defaultTranslate, state.locale]
+			[state.locale]
 		);
 
 		return (
