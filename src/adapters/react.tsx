@@ -61,7 +61,8 @@ export const initReact = (
 	allTranslations: Record<Locales, () => Promise<{ default: object }>>,
 	extraFormatters: ExtraFormatters,
 	defaultLocale: Locales,
-	extraTranslations?: ExtraTranslations
+	extraTranslations?: ExtraTranslations,
+	showKeys?: boolean
 ) => {
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
 		const defaultTranslate = useMemo(
@@ -135,7 +136,7 @@ export const initReact = (
 					isLoading: state.isLoading,
 					locale: state.locale,
 					setLocale,
-					t: state.translate,
+					t: showKeys ? (((key: string) => key) as any) : state.translate,
 				}}
 			>
 				{children}

@@ -281,6 +281,11 @@ export const getTranslate = (
 			}
 		}
 
+		if (value === key || typeof value !== 'string') {
+			console.error(`Translation key "${key}" not found`);
+			return key as unknown as Value;
+		}
+
 		if (parameters) {
 			for (const [parameter, value_] of Object.entries(parameters)) {
 				value = value.replaceAll(
