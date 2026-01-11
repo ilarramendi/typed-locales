@@ -15,11 +15,12 @@ import {
 
 export interface TranslationContextType {
 	isLoading: boolean;
-	locale?: Locales;
+	locale: Locales;
 	setLocale: (locale: Locales) => Promise<Locales>;
 	t: ReturnType<typeof getTranslate>;
 	setShowKeys: (showKeys: boolean) => void;
 	showKeys: boolean;
+	translations: TranslationType;
 }
 
 const TranslationContext = createContext<TranslationContextType | undefined>(
@@ -82,12 +83,14 @@ export const initReact = (
 		const [showKeys, setShowKeys] = useState(false);
 		const [state, setState] = useState<{
 			isLoading: boolean;
-			locale?: Locales;
+			locale: Locales;
 			translate: ReturnType<typeof getTranslate>;
+			translations: TranslationType;
 		}>({
 			isLoading: false,
 			locale: defaultLocale,
 			translate: defaultTranslate,
+			translations: defaultTranslations as any,
 		});
 
 		const setLocale = useCallback(
@@ -118,6 +121,7 @@ export const initReact = (
 							targetLocale,
 							extraFormatters
 						),
+						translations: translationData,
 					});
 				} catch (error) {
 					console.error(
@@ -141,6 +145,7 @@ export const initReact = (
 					t: showKeys ? (((key: string) => key) as any) : state.translate,
 					setShowKeys,
 					showKeys,
+					translations: state.translations,
 				}}
 			>
 				{children}
