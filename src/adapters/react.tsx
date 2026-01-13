@@ -14,9 +14,8 @@ import {
 } from '../index.js';
 
 export interface TranslationContextType {
-	isLoading: boolean;
 	locale: Locales;
-	setLocale: (locale: Locales) => Promise<Locales>;
+	setLocale: (locale: Locales) => void;
 	t: ReturnType<typeof getTranslate>;
 	setShowKeys: (showKeys: boolean) => void;
 	showKeys: boolean;
@@ -55,48 +54,37 @@ const addExtraTranslations = (
 			current[lastPart] = extraTranslation[locale];
 		}
 	}
-	return translation;
+	return translation as TranslationType;
 };
+
+const dumbTranslate = ((key: string) => key) as any;
 
 // Initial translation always should be loaded
 export const initReact = (
-	defaultTranslations: object,
+	_defaultTranslations: TranslationType,
 	allTranslations: Record<Locales, () => Promise<{ default: object }>>,
 	extraFormatters: ExtraFormatters,
 	defaultLocale: Locales,
 	extraTranslations?: ExtraTranslations
 ) => {
 	const TranslationProvider = ({ children }: { children: React.ReactNode }) => {
-		const defaultTranslate = useMemo(
-			() =>
-				getTranslate(
-					addExtraTranslations(
-						defaultTranslations as any,
-						extraTranslations ?? [],
-						defaultLocale
-					),
-					defaultLocale,
-					extraFormatters
-				),
-			[]
-		);
 		const [showKeys, setShowKeys] = useState(false);
-		const [state, setState] = useState<{
-			isLoading: boolean;
-			locale: Locales;
-			translate: ReturnType<typeof getTranslate>;
-			translations: TranslationType;
-		}>({
-			isLoading: false,
-			locale: defaultLocale,
-			translate: defaultTranslate,
-			translations: defaultTranslations as any,
+		const [locale, _setLocale] = useState(defaultLocale);
+		const [translations, setTranslations] = useState<TranslationType>(() => {
+			return addExtraTranslations(
+				_defaultTranslations,
+				extraTranslations ?? [],
+				defaultLocale
+			);
 		});
+		const translate = useMemo(() => {
+			return getTranslate(translations, locale, extraFormatters);
+		}, [translations, locale]);
 
 		const setLocale = useCallback(
 			async (targetLocale: Locales) => {
-				if (state.locale === targetLocale) {
-					return targetLocale;
+				if (locale === targetLocale) {
+					return;
 				}
 
 				try {
@@ -109,43 +97,35 @@ export const initReact = (
 						t => t.default
 					)) as any;
 
-					setState({
-						isLoading: false,
-						locale: targetLocale,
-						translate: getTranslate(
-							addExtraTranslations(
-								translationData,
-								extraTranslations ?? [],
-								targetLocale
-							),
-							targetLocale,
-							extraFormatters
-						),
-						translations: translationData,
-					});
+					const newTranslations = addExtraTranslations(
+						translationData,
+						extraTranslations ?? [],
+						targetLocale
+					);
+
+					setTranslations(newTranslations);
+					_setLocale(targetLocale);
 				} catch (error) {
 					console.error(
 						`Failed to load translations for locale ${String(targetLocale)}:`,
 						(error as Error)?.message ?? error
 					);
-					setState(previous => ({ ...previous, isLoading: false }));
-				}
 
-				return targetLocale;
+					throw error;
+				}
 			},
-			[state.locale]
+			[locale]
 		);
 
 		return (
 			<TranslationContext.Provider
 				value={{
-					isLoading: state.isLoading,
-					locale: state.locale,
+					locale,
 					setLocale,
-					t: showKeys ? (((key: string) => key) as any) : state.translate,
+					t: showKeys ? dumbTranslate : translate,
 					setShowKeys,
 					showKeys,
-					translations: state.translations,
+					translations,
 				}}
 			>
 				{children}
