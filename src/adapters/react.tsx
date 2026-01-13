@@ -15,7 +15,7 @@ import {
 
 export interface TranslationContextType {
 	locale: Locales;
-	setLocale: (locale: Locales) => void;
+	setLocale: (locale: Locales) => Promise<void>;
 	t: ReturnType<typeof getTranslate>;
 	setShowKeys: (showKeys: boolean) => void;
 	showKeys: boolean;
